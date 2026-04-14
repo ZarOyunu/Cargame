@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
 <style>
     :root {
         --bg-color: #0f1015;
@@ -39,8 +40,8 @@
     .game-title { font-size:20px; font-weight:700; margin-bottom:8px; }
     .game-developer { color: var(--text-muted); font-size:14px; margin-bottom:15px; }
 
-    #game-container { width:100%; height:100%; display:none; position:absolute; inset:0; z-index:20; background:#000; }
-    #loading-screen { position:absolute; inset:0; background: rgba(15,16,21,.95); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    #game-container { width:100%; height:100%; display:none; position:absolute; inset:0; z-index:20; background: linear-gradient(#87ceeb, #c9f0ff); }
+    #loading-screen { position:absolute; inset:0; background: rgba(15,16,21,.82); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; }
     .spinner { width:60px; height:60px; border:6px solid #2a2b38; border-top-color:var(--accent-color); border-radius:50%; animation: spin 1s linear infinite; }
     @keyframes spin { 100% { transform: rotate(360deg); } }
     #loading-text { margin-top:20px; font-size:22px; font-weight:700; color:var(--accent-color); }
@@ -183,6 +184,67 @@
         color: var(--text-muted);
         font-size: 13px;
     }
+    .join-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .server-list-wrap {
+        margin-top: 18px;
+        padding: 16px;
+        background: rgba(255,255,255,.04);
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+    }
+    .server-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+    .server-card {
+        border: 1px solid rgba(255,255,255,.09);
+        background: rgba(0,0,0,.22);
+        border-radius: 16px;
+        padding: 14px;
+        text-align: left;
+        color: var(--text-main);
+        cursor: pointer;
+        transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .server-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-color);
+        background: rgba(0,255,136,.08);
+    }
+    .server-card.active {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(0,255,136,.12) inset;
+    }
+    .server-card-top {
+        display:flex;
+        justify-content:space-between;
+        gap:10px;
+        align-items:center;
+        margin-bottom:6px;
+    }
+    .server-name {
+        font-size: 17px;
+        font-weight: 800;
+    }
+    .server-meta {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.35;
+    }
+    .server-pill {
+        font-size: 12px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.08);
+        color: #fff;
+        white-space: nowrap;
+    }
     @media (max-width: 760px) {
         .join-panel { grid-template-columns: 1fr; }
         .join-button { width: 100%; }
@@ -209,12 +271,19 @@
                 <input id="player-name-input" type="text" maxlength="16" value="Ege" autocomplete="nickname">
             </div>
             <div class="join-field">
-                <label for="room-code-input">Oda Kodu</label>
-                <input id="room-code-input" type="text" maxlength="16" value="main" autocomplete="off">
+                <label for="room-name-input">Sunucu Kodu</label>
+                <input id="room-name-input" type="text" maxlength="16" value="main" autocomplete="off" placeholder="main">
             </div>
-            <button class="join-button" id="btn-join-room" onclick="joinServer()">Sunucuya Gir</button>
+            <div class="join-actions">
+                <button class="join-button" id="btn-create-room" onclick="createRoom()">Sunucu Ekle</button>
+                <button class="join-button" id="btn-join-room" onclick="joinServer()">Sunucuya Gir</button>
+            </div>
         </div>
-        <div class="join-tip">Aynı oda kodunu yazanlar aynı dünyaya girer. Oyuna başlayınca birbirinizi göreceksiniz.</div>
+        <div class="join-tip">Aynı sunucu kodunu yazan herkes aynı dünyaya girer. Yeni bir kod yazıp “Sunucu Ekle” ile oluşturabilirsin.</div>
+        <div class="server-list-wrap">
+            <div class="section-title" style="margin:10px 0 14px; font-size:22px;">🛰️ Sunucular</div>
+            <div id="server-list" class="server-list"></div>
+        </div>
         <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
         <div class="games-grid">
             <div class="game-card" onclick="joinServer()">
@@ -237,6 +306,7 @@
     </div>
 
     <div id="canvas-container" style="width:100%;height:100%;"></div>
+    <div id="startup-fallback" style="position:absolute;left:20px;bottom:20px;z-index:50;background:rgba(0,0,0,.45);padding:10px 12px;border-radius:10px;font-size:13px;color:#fff;pointer-events:none;">WebGL başlatılıyor...</div>
     <div id="game-ui" style="display:none;">
         <div class="player-list">
             👥 Aktif Oyuncular: <strong><span id="active-count">1</span></strong><br>
@@ -281,8 +351,10 @@ const gameUI = document.getElementById('game-ui');
 const mapStatus = document.getElementById('map-status');
 const speechLayer = document.getElementById('speech-layer');
 const nameInput = document.getElementById('player-name-input');
-const roomInput = document.getElementById('room-code-input');
+const roomInput = document.getElementById('room-name-input');
 const joinRoomBtn = document.getElementById('btn-join-room');
+const createRoomBtn = document.getElementById('btn-create-room');
+const serverListEl = document.getElementById('server-list');
 const profileName = document.querySelector('.user-profile span');
 const profileAvatar = document.querySelector('.avatar');
 const activeCountEl = document.getElementById('active-count');
@@ -301,11 +373,11 @@ let scene, camera, renderer;
 let player, playerBody, playerHead, playerArms = [], playerLegs = [];
 let velocityY = 0, gravity = -0.015, jumpPower = 0.36, isGrounded = false;
 let moveSpeed = 0.12, runMultiplier = 1.6, isRunning = false;
-let cameraDistance = 12, cameraHeight = 6;
-let viewYaw = 0;
-let viewPitch = 0.28;
-const maxPitchUp = 0.85;
-const maxPitchDown = -0.18;
+let cameraDistance = 8, cameraHeight = 4;
+let viewYaw = Math.PI;          // kameranın başlangıç yönü
+let viewPitch = -0.18;          // hafif yukarıdan bakış
+let maxPitchDown = -0.65;
+let maxPitchUp = 0.95;
 let lookDragging = false;
 let lookPointerId = null;
 let lookLastX = 0;
@@ -335,15 +407,29 @@ const firebaseConfig = {
 };
 let fbApp = null;
 let fbDb = null;
+let fbAuth = null;
 let playersRef = null;
+let connectedRef = null;
 let meRef = null;
+let roomsRef = null;
+let roomMetaRef = null;
 let firebaseReady = false;
-let roomId = localStorage.getItem('novago_room') || 'main';
+let firebaseInitPromise = null;
+let authUser = null;
+let savedRoom = localStorage.getItem('novago_room') || 'main';
+let roomId = normalizeRoomCode(savedRoom);
 let playerName = localStorage.getItem('novago_name') || 'Ege';
 const playerId = `p_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
 const remotePlayers = new Map();
 let localLastSync = 0;
 let lastSentFartAt = 0;
+let firebaseRoomsCache = {};
+let multiplayerMode = 'firebase';
+let localChannel = null;
+let localPresenceTimer = null;
+let localPruneTimer = null;
+let localStorageListenerInstalled = false;
+const LOCAL_PEER_TTL = 4500;
 
 // joystick
 let joystickX = 0;
@@ -353,14 +439,21 @@ let joystickPointerId = null;
 let joystickCenter = { x: 0, y: 0 };
 
 const CHUNK_SIZE = 24;
-const CHUNK_RADIUS = 2;
+const CHUNK_RADIUS = 1;
 const WORLD_SEED = 1337;
+const MEETING_POINT = { x: 0, y: 1, z: 0 };
 
 function seedFromCoords(x, z, extra = 0) {
     const s = Math.sin(x * 9283.17 + z * 1931.11 + WORLD_SEED + extra * 53.1) * 10000;
     return s - Math.floor(s);
 }
 function randBetween(x, z, min, max, offset = 0) { return min + seedFromCoords(x + offset, z - offset, offset) * (max - min); }
+function pickSeeded(list, x, z, extra = 0) {
+    return list[Math.floor(seedFromCoords(x, z, extra) * list.length) % list.length];
+}
+function seededInt(x, z, min, max, extra = 0) {
+    return min + Math.floor(seedFromCoords(x, z, extra) * (max - min + 1));
+}
 function showMapStatus(text) {
     mapStatus.textContent = text;
     mapStatus.classList.add('show');
@@ -385,9 +478,116 @@ function normalizePlayerName(value) {
 function syncLobbyInfo() {
     if (profileName) profileName.textContent = playerName;
     if (profileAvatar) profileAvatar.textContent = (playerName[0] || 'E').toUpperCase();
-    if (roomInput) roomInput.value = roomId;
     if (nameInput) nameInput.value = playerName;
 }
+
+function loadLocalRoomIndex() {
+    try {
+        const raw = localStorage.getItem('novago_room_index');
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+function saveLocalRoomIndex(index) {
+    try {
+        localStorage.setItem('novago_room_index', JSON.stringify(index || {}));
+    } catch (_) {}
+}
+
+function upsertLocalRoom(code, meta = {}) {
+    const roomCode = normalizeRoomCode(code);
+    const index = loadLocalRoomIndex();
+    index[roomCode] = {
+        meta: {
+            code: roomCode,
+            displayName: meta.displayName || makeRoomDisplayName(roomCode),
+            updatedAt: meta.updatedAt || Date.now(),
+            createdBy: meta.createdBy || 'local'
+        }
+    };
+    saveLocalRoomIndex(index);
+    return index;
+}
+
+function getMergedRoomMap(remoteRooms = {}) {
+    const merged = { ...loadLocalRoomIndex(), ...(remoteRooms || {}) };
+    const currentCode = normalizeRoomCode(roomId || (roomInput && roomInput.value) || 'main');
+    if (!merged[currentCode]) {
+        merged[currentCode] = {
+            meta: {
+                code: currentCode,
+                displayName: makeRoomDisplayName(currentCode),
+                updatedAt: Date.now(),
+                createdBy: 'local'
+            }
+        };
+    }
+    return merged;
+}
+function syncRoomLobbyInfo() {
+    if (roomInput) roomInput.value = roomId;
+    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: 'local' });
+}
+
+function makeRoomDisplayName(code) {
+    const raw = String(code || 'main').trim();
+    return raw ? raw.replace(/[_-]+/g, ' ').replace(/\b\w/g, s => s.toUpperCase()) : 'Main';
+}
+
+function getRoomCodeFromInput() {
+    const saved = localStorage.getItem('novago_room') || 'main';
+    return normalizeRoomCode(roomInput ? roomInput.value : saved);
+}
+
+function setSelectedRoom(code) {
+    roomId = normalizeRoomCode(code);
+    if (roomInput) roomInput.value = roomId;
+    try {
+        localStorage.setItem('novago_room', roomId);
+    } catch (e) {}
+    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: authUser ? authUser.uid : 'local' });
+    syncRoomLobbyInfo();
+    renderServerList(firebaseRoomsCache);
+}
+
+async function createRoom() {
+    const nextRoom = getRoomCodeFromInput() || ('room-' + Math.random().toString(36).slice(2, 6));
+    setSelectedRoom(nextRoom);
+    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: authUser ? authUser.uid : 'local' });
+    renderServerList(firebaseRoomsCache);
+    try {
+        await initFirebaseCore();
+        roomMetaRef = fbDb.ref(`rooms/${roomId}/meta`);
+        await roomMetaRef.update({
+            code: roomId,
+            displayName: makeRoomDisplayName(roomId),
+            updatedAt: Date.now(),
+            createdBy: authUser ? authUser.uid : null
+        });
+        if (!roomsRef) {
+            roomsRef = fbDb.ref('rooms');
+            roomsRef.on('value', snap => {
+                firebaseRoomsCache = snap.val() || {};
+                renderServerList(firebaseRoomsCache);
+            });
+        }
+        firebaseRoomsCache = (await fbDb.ref('rooms').once('value')).val() || {};
+        renderServerList(firebaseRoomsCache);
+    } catch (err) {
+        console.warn('createRoom failed:', err);
+    }
+    if (serverLogs) {
+        serverLogs.innerHTML = `<p>Sunucu hazır: ${roomId}</p><p>İstersen şimdi girip açabilirsin.</p>`;
+    }
+    if (serverListEl) {
+        const existing = serverListEl.querySelector(`[data-room="${roomId}"]`);
+        if (existing) existing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
 
 
 if (nameInput) {
@@ -399,10 +599,32 @@ if (nameInput) {
 if (roomInput) {
     roomInput.addEventListener('input', () => {
         roomId = normalizeRoomCode(roomInput.value);
-        syncLobbyInfo();
     });
 }
+
+window.addEventListener('error', (event) => {
+    try {
+        const msg = event && event.error ? (event.error.stack || event.error.message || String(event.error)) : (event.message || 'Bilinmeyen hata');
+        console.error('Global error:', msg);
+        if (serverLogs) serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${msg}</p>`;
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (gameContainer) gameContainer.style.display = 'block';
+    } catch (_) {}
+});
+window.addEventListener('unhandledrejection', (event) => {
+    try {
+        const msg = event && event.reason ? (event.reason.stack || event.reason.message || String(event.reason)) : 'Unhandled rejection';
+        console.error('Unhandled rejection:', msg);
+        if (serverLogs) serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${msg}</p>`;
+        if (loadingScreen) loadingScreen.style.display = 'none';
+        if (gameContainer) gameContainer.style.display = 'block';
+    } catch (_) {}
+});
+
 syncLobbyInfo();
+syncRoomLobbyInfo();
+renderServerList(firebaseRoomsCache);
+initLobbyBrowser().catch(() => {});
 function refreshPlayerHud(players) {
     const activeCount = activeCountEl || document.getElementById('active-count');
     const list = playersListEl || document.getElementById('players-list');
@@ -419,6 +641,35 @@ function refreshPlayerHud(players) {
             return `<div class="player-row"><span class="player-dot" style="background:${color}"></span><span style="color:${color}">${name}</span>${meTag}</div>`;
         }).join('')
         : '<div style="color:var(--text-muted)">Kimse yok</div>';
+}
+
+
+function renderServerList(rooms) {
+    if (!serverListEl) return;
+    const mergedRooms = getMergedRoomMap(rooms || {});
+    const entries = Object.entries(mergedRooms).map(([code, room]) => {
+        const players = room && room.players ? Object.values(room.players) : [];
+        const activePlayers = players.filter(p => p && p.name).length;
+        const displayName = (room && room.meta && room.meta.displayName) ? room.meta.displayName : makeRoomDisplayName(code);
+        const lastSeen = room && room.meta && room.meta.updatedAt ? room.meta.updatedAt : 0;
+        const isActive = activePlayers > 0;
+        const activeClass = code === roomId ? ' active' : '';
+        const subtitle = isActive
+            ? `${activePlayers} oyuncu • canlı`
+            : 'boş oda';
+        return `
+            <button class="server-card${activeClass}" data-room="${code}" onclick="setSelectedRoom('${code}')" type="button">
+                <div class="server-card-top">
+                    <div class="server-name">${displayName}</div>
+                    <div class="server-pill">${isActive ? 'Aktif' : 'Pasif'}</div>
+                </div>
+                <div class="server-meta">Kod: <strong>${code}</strong><br>${subtitle}${lastSeen ? `<br>Güncel: ${new Date(lastSeen).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}` : ''}</div>
+            </button>`;
+    });
+
+    serverListEl.innerHTML = entries.length
+        ? entries.join('')
+        : '<div style="color:var(--text-muted)">Henüz sunucu yok. Bir kod yazıp oluştur.</div>';
 }
 
 function createRemoteAvatar(color = 0x66ccff) {
@@ -494,7 +745,238 @@ function positionTagForObject(tag, object3D, offsetY = 2.5) {
     tag.style.top = `${(-screenPos.y * 0.5 + 0.5) * window.innerHeight}px`;
 }
 
+
+
+function getLocalPresenceKey(id = playerId, code = roomId) {
+    return `novago_presence_${normalizeRoomCode(code)}_${id}`;
+}
+
+function getLocalPresencePrefix(code = roomId) {
+    return `novago_presence_${normalizeRoomCode(code)}_`;
+}
+
+function buildPresenceSnapshot() {
+    if (!player || !player.position || !player.rotation) return null;
+    return {
+        name: normalizePlayerName(playerName),
+        x: Number.isFinite(player.position.x) ? player.position.x : 0,
+        y: Number.isFinite(player.position.y) ? player.position.y : 1,
+        z: Number.isFinite(player.position.z) ? player.position.z : 0,
+        yaw: Number.isFinite(player.rotation.y) ? player.rotation.y : 0,
+        color: '#ff3366',
+        fartAt: lastSentFartAt || 0,
+        updatedAt: Date.now(),
+        authUid: authUser ? authUser.uid : null
+    };
+}
+
+function readLocalRoomPresence(code = roomId) {
+    const prefix = getLocalPresencePrefix(code);
+    const now = Date.now();
+    const snapshot = {};
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith(prefix)) continue;
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            try {
+                const data = JSON.parse(raw);
+                const updatedAt = Number(data && data.updatedAt) || 0;
+                if (now - updatedAt <= LOCAL_PEER_TTL) {
+                    const id = key.slice(prefix.length);
+                    if (id) snapshot[id] = data;
+                }
+            } catch (_) {}
+        }
+    } catch (err) {
+        console.warn('readLocalRoomPresence failed:', err);
+    }
+    const me = buildPresenceSnapshot();
+    if (me) snapshot[playerId] = me;
+    return snapshot;
+}
+
+function syncLocalRoomSnapshot() {
+    if (!player || !player.position) return;
+    const snapshot = readLocalRoomPresence(roomId);
+    syncRemotePlayers(snapshot);
+    refreshPlayerHud(snapshot);
+    const count = Object.keys(snapshot).length;
+    setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • ${count > 1 ? 'Buluşma aktif' : 'Bekleniyor'} (yerel)`);
+}
+
+function writeLocalPresence(force = false) {
+    if (multiplayerMode !== 'local' || !player || !player.position) return;
+    const payload = buildPresenceSnapshot();
+    if (!payload) return;
+    payload.updatedAt = Date.now();
+    payload.roomId = roomId;
+    try {
+        localStorage.setItem(getLocalPresenceKey(), JSON.stringify(payload));
+    } catch (err) {
+        console.warn('writeLocalPresence failed:', err);
+    }
+    if (localChannel) {
+        try { localChannel.postMessage({ type: 'state', roomId, playerId, payload }); } catch (_) {}
+    }
+    if (force) syncLocalRoomSnapshot();
+}
+
+function broadcastLocalFart() {
+    if (multiplayerMode !== 'local' || !player || !player.position) return;
+    const payload = buildPresenceSnapshot();
+    if (!payload) return;
+    payload.fartAt = lastSentFartAt;
+    payload.updatedAt = Date.now();
+    payload.roomId = roomId;
+    try {
+        localStorage.setItem(getLocalPresenceKey(), JSON.stringify(payload));
+    } catch (err) {
+        console.warn('broadcastLocalFart failed:', err);
+    }
+    if (localChannel) {
+        try { localChannel.postMessage({ type: 'fart', roomId, playerId, payload }); } catch (_) {}
+    }
+    syncLocalRoomSnapshot();
+}
+
+function cleanupLocalMultiplayer() {
+    try {
+        if (localPresenceTimer) clearInterval(localPresenceTimer);
+    } catch (_) {}
+    try {
+        if (localPruneTimer) clearInterval(localPruneTimer);
+    } catch (_) {}
+    localPresenceTimer = null;
+    localPruneTimer = null;
+    try {
+        if (localChannel) localChannel.close();
+    } catch (_) {}
+    localChannel = null;
+    try {
+        if (localStorageListenerInstalled) window.removeEventListener('storage', onLocalStorageEvent);
+    } catch (_) {}
+    localStorageListenerInstalled = false;
+    try {
+        localStorage.removeItem(getLocalPresenceKey());
+    } catch (_) {}
+}
+
+function onLocalStorageEvent(e) {
+    if (!e || !e.key) return;
+    if (!e.key.startsWith(getLocalPresencePrefix())) return;
+    syncLocalRoomSnapshot();
+}
+
+function initLocalMultiplayer() {
+    multiplayerMode = 'local';
+    firebaseReady = false;
+    setNetworkStatus(`Çevrim içi: <strong>yerel</strong> • ${playerName}`);
+    syncRoomLobbyInfo();
+
+    if (!localStorageListenerInstalled) {
+        window.addEventListener('storage', onLocalStorageEvent);
+        localStorageListenerInstalled = true;
+    }
+
+    if (typeof BroadcastChannel !== 'undefined') {
+        try {
+            localChannel = new BroadcastChannel(`novago_${normalizeRoomCode(roomId)}`);
+            localChannel.onmessage = (ev) => {
+                const msg = ev && ev.data;
+                if (!msg || msg.roomId !== roomId || msg.playerId === playerId) return;
+                if (msg.type === 'state' || msg.type === 'fart') {
+                    syncLocalRoomSnapshot();
+                }
+            };
+        } catch (err) {
+            console.warn('BroadcastChannel unavailable:', err);
+            localChannel = null;
+        }
+    }
+
+    // Player henüz oluşmadıysa güvenli şekilde bekle.
+    writeLocalPresence(true);
+    if (localPresenceTimer) clearInterval(localPresenceTimer);
+    localPresenceTimer = setInterval(() => writeLocalPresence(false), 250);
+
+    if (localPruneTimer) clearInterval(localPruneTimer);
+    localPruneTimer = setInterval(() => {
+        syncLocalRoomSnapshot();
+    }, 700);
+
+    addLog('Yerel çok oyunculu mod açıldı.');
+    return true;
+}
+
+
+async function initFirebaseCore() {
+    if (fbDb) return true;
+    fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.database();
+
+    try {
+        const cred = await fbAuth.signInAnonymously();
+        authUser = cred && cred.user ? cred.user : fbAuth.currentUser;
+    } catch (authErr) {
+        console.warn('Anonymous auth failed, continuing:', authErr);
+        authUser = fbAuth.currentUser || null;
+    }
+
+    if (!authUser) {
+        await new Promise(resolve => {
+            const unsubscribe = fbAuth.onAuthStateChanged(user => {
+                if (user) {
+                    authUser = user;
+                    unsubscribe();
+                    resolve(user);
+                }
+            });
+            setTimeout(() => {
+                try { unsubscribe(); } catch (_) {}
+                resolve(null);
+            }, 2500);
+        });
+    }
+
+    return true;
+}
+
+async function initLobbyBrowser() {
+    try {
+        if (location.protocol === 'file:') {
+            initLocalMultiplayer();
+            renderServerList(firebaseRoomsCache);
+            return;
+        }
+        await initFirebaseCore();
+        if (!roomsRef) {
+            roomsRef = fbDb.ref('rooms');
+            roomsRef.on('value', snap => {
+                firebaseRoomsCache = snap.val() || {};
+                renderServerList(firebaseRoomsCache);
+            }, err => {
+                console.error('roomsRef read error:', err);
+            });
+        }
+        if (roomInput) {
+            roomInput.value = roomId;
+        }
+        firebaseRoomsCache = (await fbDb.ref('rooms').once('value')).val() || {};
+        renderServerList(firebaseRoomsCache);
+    } catch (err) {
+        console.warn('initLobbyBrowser failed:', err);
+        renderServerList(firebaseRoomsCache);
+    }
+}
+
+
 function cleanupMultiplayer() {
+    try {
+        if (multiplayerMode === 'local') cleanupLocalMultiplayer();
+    } catch (_) {}
     try {
         if (meRef) {
             meRef.remove();
@@ -503,6 +985,21 @@ function cleanupMultiplayer() {
     try {
         if (playersRef) {
             playersRef.off();
+        }
+    } catch (e) {}
+    try {
+        if (connectedRef) {
+            connectedRef.off();
+        }
+    } catch (e) {}
+    try {
+        if (roomsRef) {
+            roomsRef.off();
+        }
+    } catch (e) {}
+    try {
+        if (roomMetaRef) {
+            roomMetaRef.off();
         }
     } catch (e) {}
     remotePlayers.forEach(entry => {
@@ -517,42 +1014,91 @@ function cleanupMultiplayer() {
     setNetworkStatus('Bağlantı kapatıldı');
 }
 
-function initMultiplayer() {
-    if (firebaseReady) return;
-    try {
-        fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-        fbDb = firebase.database();
-        playersRef = fbDb.ref(`rooms/${roomId}/players`);
-        meRef = playersRef.child(playerId);
+async function initMultiplayer() {
+    if (firebaseReady && multiplayerMode === 'firebase') return true;
+    if (firebaseInitPromise) return firebaseInitPromise;
 
-        meRef.onDisconnect().remove();
-        meRef.set({
-            name: playerName,
-            x: player.position.x,
-            y: player.position.y,
-            z: player.position.z,
-            yaw: player.rotation.y,
-            color: '#ff3366',
-            fartAt: 0,
-            updatedAt: Date.now()
-        });
+    firebaseInitPromise = (async () => {
+        try {
+            if (location.protocol === 'file:') {
+                return initLocalMultiplayer();
+            }
+            setNetworkStatus('Firebase kimlik doğrulanıyor...');
+            await initFirebaseCore();
 
-        playersRef.on('value', snap => {
-            const data = snap.val() || {};
-            syncRemotePlayers(data);
-            refreshPlayerHud(data);
-            const count = Object.keys(data).length;
-            setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • Oda: <strong>${roomId}</strong>`);
-        });
+            roomId = normalizeRoomCode(roomId || (roomInput && roomInput.value) || 'main');
+            syncRoomLobbyInfo();
+            roomsRef = fbDb.ref('rooms');
+            roomMetaRef = fbDb.ref(`rooms/${roomId}/meta`);
+            playersRef = fbDb.ref(`rooms/${roomId}/players`);
+            meRef = playersRef.child(playerId);
 
-        firebaseReady = true;
-        setNetworkStatus('Çevrim içi: <strong>1</strong> kişi • Oda: <strong>main</strong>');
-        addLog('Firebase çok oyunculu mod başlatıldı.');
-    } catch (err) {
-        console.warn('Firebase multiplayer failed:', err);
-        setNetworkStatus('Çevrim içi bağlantı kurulamadı');
-        addLog('Firebase bağlantısı kurulamadı, yerel modda devam ediliyor.');
-    }
+            await roomMetaRef.update({
+                code: roomId,
+                displayName: makeRoomDisplayName(roomId),
+                updatedAt: Date.now(),
+                createdBy: authUser ? authUser.uid : null
+            }).catch(() => {});
+
+            await meRef.onDisconnect().remove();
+            try { roomMetaRef.child('lastLeave').onDisconnect().set(Date.now()); } catch (_) {}
+            await meRef.set({
+                name: playerName,
+                x: player.position.x,
+                y: player.position.y,
+                z: player.position.z,
+                yaw: player.rotation.y,
+                color: '#ff3366',
+                fartAt: 0,
+                updatedAt: Date.now(),
+                authUid: authUser ? authUser.uid : null
+            });
+
+            playersRef.on('value', snap => {
+                const data = snap.val() || {};
+                syncRemotePlayers(data);
+                refreshPlayerHud(data);
+                const count = Object.keys(data).length;
+                setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • ${count > 1 ? 'Buluşma aktif' : 'Bekleniyor'}`);
+            }, err => {
+                console.error('playersRef read error:', err);
+                setNetworkStatus('Firebase okuma izni yok');
+                addLog('Firebase okuma reddedildi. Database rules kontrol edilmeli.');
+            });
+
+            connectedRef = fbDb.ref('.info/connected');
+            connectedRef.on('value', snap => {
+                const connected = !!(snap && snap.val());
+                if (connected) {
+                    setNetworkStatus(`Çevrim içi: <strong>Bağlandı</strong> • ${playerName}`);
+                    sendLocalState(true);
+                } else {
+                    setNetworkStatus('Bağlantı kesildi, tekrar deneniyor...');
+                }
+            });
+
+            window.addEventListener('beforeunload', cleanupMultiplayer, { once: true });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) sendLocalState(true);
+            });
+
+            firebaseReady = true;
+            multiplayerMode = 'firebase';
+            sendLocalState(true);
+            setNetworkStatus('Çevrim içi: <strong>1</strong> kişi • Bekleniyor');
+            addLog('Firebase çok oyunculu mod başlatıldı.');
+            return true;
+        } catch (err) {
+            console.warn('Firebase multiplayer failed:', err);
+            setNetworkStatus('Çevrim içi bağlantı kurulamadı');
+            addLog(`Firebase bağlantısı kurulamadı: ${String(err && err.message ? err.message : err)}`);
+            return initLocalMultiplayer();
+        } finally {
+            firebaseInitPromise = null;
+        }
+    })();
+
+    return firebaseInitPromise;
 }
 
 function syncRemotePlayers(players) {
@@ -572,6 +1118,7 @@ function syncRemotePlayers(players) {
             const label = makeNameTag(p.name || 'Oyuncu', color);
             entry = { group, label, lastFartAt: p.fartAt || 0, color, name: p.name || 'Oyuncu' };
             remotePlayers.set(id, entry);
+            addLog(`${entry.name} dünyaya katıldı.`);
         }
 
         entry.name = p.name || entry.name || 'Oyuncu';
@@ -595,11 +1142,17 @@ function syncRemotePlayers(players) {
 }
 
 function sendLocalState(force = false) {
-    if (!meRef || !player || !firebaseReady) return;
+    if (!player) return;
     const now = Date.now();
     if (!force && now - localLastSync < 80) return;
     localLastSync = now;
 
+    if (multiplayerMode === 'local') {
+        writeLocalPresence(force);
+        return;
+    }
+
+    if (!meRef || !firebaseReady) return;
     meRef.update({
         name: playerName,
         x: player.position.x,
@@ -607,21 +1160,32 @@ function sendLocalState(force = false) {
         z: player.position.z,
         yaw: player.rotation.y,
         color: '#ff3366',
-        updatedAt: now
-    }).catch(() => {});
+        updatedAt: now,
+        authUid: authUser ? authUser.uid : null
+    }).catch(err => {
+        console.warn('sendLocalState failed:', err);
+    });
 }
 
 function sendFartToNetwork() {
-    if (!meRef) return;
+    if (!player) return;
     lastSentFartAt = Date.now();
+    if (multiplayerMode === 'local') {
+        broadcastLocalFart();
+        return;
+    }
+    if (!meRef) return;
     meRef.update({
         fartAt: lastSentFartAt,
         x: player.position.x,
         y: player.position.y,
         z: player.position.z,
         yaw: player.rotation.y,
-        updatedAt: lastSentFartAt
-    }).catch(() => {});
+        updatedAt: lastSentFartAt,
+        authUid: authUser ? authUser.uid : null
+    }).catch(err => {
+        console.warn('sendFartToNetwork failed:', err);
+    });
 }
 
 function updateRemoteTags() {
@@ -639,32 +1203,56 @@ function addLog(text) {
 }
 
 function joinServer() {
-    roomId = normalizeRoomCode(roomInput ? roomInput.value : roomId);
-    playerName = normalizePlayerName(nameInput ? nameInput.value : playerName);
+    try {
+        playerName = normalizePlayerName(nameInput ? nameInput.value : playerName);
+        setSelectedRoom(getRoomCodeFromInput());
 
-    localStorage.setItem('novago_room', roomId);
-    localStorage.setItem('novago_name', playerName);
-    syncLobbyInfo();
+        try {
+            localStorage.setItem('novago_name', playerName);
+        } catch (storageErr) {
+            console.warn('localStorage unavailable:', storageErr);
+        }
 
-    hubContainer.style.display = 'none';
-    gameContainer.style.display = 'block';
-    loadingScreen.style.display = 'flex';
-    serverLogs.innerHTML = '<p>Uzak sunucu IP\'si aranıyor...</p>';
-    setNetworkStatus(`Oda: <strong>${roomId}</strong> • Oyuncu: <strong>${playerName}</strong>`);
-    setTimeout(() => addLog(`Kimlik doğrulanıyor (${playerName})...`), 800);
-    setTimeout(() => addLog('Dünya verileri indiriliyor...'), 1600);
-    setTimeout(() => addLog('Çevre detayları hazırlanıyor...'), 2300);
-    setTimeout(() => addLog('Buluşma alanı yükleniyor...'), 3000);
-    setTimeout(() => { loadingText.innerText = 'Sunucuya Katılındı!'; loadingText.style.color = '#ffffff'; }, 3400);
-    setTimeout(() => {
+        syncLobbyInfo();
+        syncRoomLobbyInfo();
+        renderServerList(firebaseRoomsCache);
+
+        hubContainer.style.display = 'none';
+        gameContainer.style.display = 'block';
+        loadingScreen.style.display = 'flex';
+        serverLogs.innerHTML = `<p>Sunucu hazırlanıyor: <strong>${roomId}</strong></p><p>Firebase bağlantısı kontrol ediliyor...</p>`;
+        setNetworkStatus(`Sunucu: <strong>${roomId}</strong> • Oyuncu: <strong>${playerName}</strong>`);
+        addLog(`Kimlik doğrulanıyor (${playerName})...`);
+        addLog(`Sunucuya bağlanılıyor: ${roomId}`);
+        setTimeout(() => addLog('Dünya verileri optimize ediliyor...'), 250);
+        setTimeout(() => addLog('Ortak dünya yükleniyor...'), 500);
+        setTimeout(() => addLog('Aynı sunucuya girenler eşleştiriliyor...'), 750);
+        setTimeout(() => { loadingText.innerText = 'Sunucuya Katılındı!'; loadingText.style.color = '#ffffff'; }, 900);
+        setTimeout(() => {
+            try {
+                loadingScreen.style.display = 'none';
+                mobileControls.style.display = 'flex';
+                btnExit.style.display = 'block';
+                gameUI.style.display = 'block';
+                if (speechLayer) speechLayer.innerHTML = '';
+                startGameEngine();
+            } catch (err) {
+                console.error('startGameEngine failed:', err);
+                loadingScreen.style.display = 'none';
+                gameUI.style.display = 'block';
+                setNetworkStatus('Oyun başlatılamadı');
+                serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${String(err && err.message ? err.message : err)}</p>`;
+            }
+        }, 1100);
+    } catch (err) {
+        console.error('joinServer failed:', err);
+        hubContainer.style.display = 'block';
+        gameContainer.style.display = 'none';
         loadingScreen.style.display = 'none';
-        mobileControls.style.display = 'flex';
-        btnExit.style.display = 'block';
-        gameUI.style.display = 'block';
-        if (speechLayer) speechLayer.innerHTML = '';
-        startGameEngine();
-    }, 3900);
+        serverLogs.innerHTML = `<p style="color:#ff8a8a">Başlatma hatası: ${String(err && err.message ? err.message : err)}</p>`;
+    }
 }
+
 
 function exitGame() {
 
@@ -712,9 +1300,10 @@ function registerDestructible(object3D, type, key) {
     destructibles.push({ object3D, type, key, destroyed: false });
 }
 
-function makeTree() {
+function makeTree(cx = 0, cz = 0, index = 0) {
     const group = new THREE.Group();
-    const trunkHeight = 1.6 + Math.random() * 0.7;
+    const seedBase = cx * 13.7 + cz * 7.3 + index * 19.1;
+    const trunkHeight = 1.6 + seedFromCoords(cx, cz, index + 1) * 0.7;
     const trunk = new THREE.Mesh(
         new THREE.CylinderGeometry(0.18, 0.23, trunkHeight, 7),
         new THREE.MeshStandardMaterial({ color: 0x7a4e2e })
@@ -724,21 +1313,23 @@ function makeTree() {
     group.add(trunk);
 
     const crown = new THREE.Mesh(
-        new THREE.SphereGeometry(0.95 + Math.random() * 0.35, 8, 8),
-        new THREE.MeshStandardMaterial({ color: 0x2f9b3a })
+        new THREE.SphereGeometry(0.95 + seedFromCoords(cx, cz, index + 2) * 0.35, 8, 8),
+        new THREE.MeshStandardMaterial({ color: pickSeeded([0x2f9b3a, 0x2b8a34, 0x38a13d], cx, cz, index + 3) })
     );
     crown.position.y = trunkHeight + 0.7;
     crown.castShadow = true;
     group.add(crown);
 
+    group.rotation.y = seedFromCoords(cx, cz, index + 4) * Math.PI * 2;
+    group.userData.seedBase = seedBase;
     return group;
 }
 
-function makeHouse() {
+function makeHouse(cx = 0, cz = 0, index = 0) {
     const group = new THREE.Group();
-    const w = 4.2 + Math.random() * 1.2;
-    const d = 4.2 + Math.random() * 1.2;
-    const h = 2.4 + Math.random() * 0.6;
+    const w = 4.2 + seedFromCoords(cx, cz, index + 10) * 1.2;
+    const d = 4.2 + seedFromCoords(cx, cz, index + 11) * 1.2;
+    const h = 2.4 + seedFromCoords(cx, cz, index + 12) * 0.6;
 
     const floor = new THREE.Mesh(
         new THREE.BoxGeometry(w, 0.16, d),
@@ -772,7 +1363,7 @@ function makeHouse() {
         new THREE.MeshStandardMaterial({ color: 0x8b3f2f })
     );
     roof.position.y = h + 1.0;
-    roof.rotation.y = Math.PI / 4;
+    roof.rotation.y = Math.PI / 4 + seedFromCoords(cx, cz, index + 13) * 0.2;
     roof.castShadow = true;
     group.add(roof);
 
@@ -798,12 +1389,11 @@ function makeHouse() {
     return group;
 }
 
-
-function makeNpc() {
+function makeNpc(cx = 0, cz = 0, index = 0) {
     const group = new THREE.Group();
-    const bodyColor = [0x4dd0e1, 0xff8f6b, 0xa78bfa, 0xf59e0b][Math.floor(Math.random() * 4)];
-    const skin = [0xf1c7a1, 0xd8a07a, 0xffd2b3, 0xb98268][Math.floor(Math.random() * 4)];
-    const pantsColor = [0x2f3d59, 0x334155, 0x1f2937][Math.floor(Math.random() * 3)];
+    const bodyColor = [0x4dd0e1, 0xff8f6b, 0xa78bfa, 0xf59e0b][seededInt(cx, cz, 0, 3, index + 21)];
+    const skin = [0xf1c7a1, 0xd8a07a, 0xffd2b3, 0xb98268][seededInt(cx, cz, 0, 3, index + 22)];
+    const pantsColor = [0x2f3d59, 0x334155, 0x1f2937][seededInt(cx, cz, 0, 2, index + 23)];
 
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.9, 1.1, 0.55),
@@ -850,10 +1440,10 @@ function makeNpc() {
         new THREE.MeshStandardMaterial({ color: 0x111827 })
     );
     hat.position.y = 2.52;
-    hat.rotation.y = Math.random() * Math.PI;
+    hat.rotation.y = seedFromCoords(cx, cz, index + 24) * Math.PI;
 
     group.add(legL, legR, hat);
-    group.userData.npcName = ['Mert', 'Ada', 'Sude', 'Arda', 'Deniz'][Math.floor(Math.random() * 5)];
+    group.userData.npcName = ['Mert', 'Ada', 'Sude', 'Arda', 'Deniz'][seededInt(cx, cz, 0, 4, index + 25)];
 
     return group;
 }
@@ -865,6 +1455,7 @@ function spawnChunk(cx, cz) {
     const group = new THREE.Group();
     group.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
     const entities = [];
+    const chunkSeed = seedFromCoords(cx, cz, 91);
 
     const groundColor = 0x3a9b39 + Math.floor(seedFromCoords(cx, cz) * 0x0f0f0f);
     const ground = new THREE.Mesh(
@@ -877,9 +1468,9 @@ function spawnChunk(cx, cz) {
     group.add(ground);
 
     // çim ve taş detayları
-    const bladeCount = 12 + Math.floor(seedFromCoords(cx + 3, cz + 9) * 10);
+    const bladeCount = 5 + Math.floor(seedFromCoords(cx + 3, cz + 9) * 4);
     for (let i = 0; i < bladeCount; i++) {
-        const height = 0.18 + seedFromCoords(cx + i, cz - i) * 0.35;
+        const height = 0.18 + seedFromCoords(cx + i, cz - i, i + 1) * 0.35;
         const blade = new THREE.Mesh(
             new THREE.BoxGeometry(0.03, height, 0.03),
             new THREE.MeshStandardMaterial({ color: 0x2d7c30 })
@@ -894,7 +1485,7 @@ function spawnChunk(cx, cz) {
         entities.push(blade);
     }
 
-    const rockCount = seedFromCoords(cx + 8, cz + 1) > 0.35 ? 1 : 0;
+    const rockCount = seedFromCoords(cx + 8, cz + 1) > 0.55 ? 1 : 0;
     for (let i = 0; i < rockCount; i++) {
         const rock = new THREE.Mesh(
             new THREE.DodecahedronGeometry(0.55 + seedFromCoords(cx + 18, cz + 12) * 0.4, 0),
@@ -911,9 +1502,9 @@ function spawnChunk(cx, cz) {
         entities.push(rock);
     }
 
-    const treeCount = 2 + Math.floor(seedFromCoords(cx + 5, cz + 5) * 4);
+    const treeCount = 1 + Math.floor(seedFromCoords(cx + 5, cz + 5) * 2);
     for (let i = 0; i < treeCount; i++) {
-        const tree = makeTree();
+        const tree = makeTree(cx, cz, i);
         tree.position.set(
             2 + seedFromCoords(cx + i * 4, cz + i * 8) * (CHUNK_SIZE - 4),
             0,
@@ -926,8 +1517,8 @@ function spawnChunk(cx, cz) {
     }
 
     const houseChance = seedFromCoords(cx * 7, cz * 7);
-    if (houseChance > 0.45) {
-        const house = makeHouse();
+    if (houseChance > 0.68) {
+        const house = makeHouse(cx, cz, 0);
         house.position.set(
             CHUNK_SIZE * 0.5 + (seedFromCoords(cx + 77, cz + 2) - 0.5) * 8,
             0,
@@ -939,10 +1530,10 @@ function spawnChunk(cx, cz) {
         registerDestructible(house, 'house', key);
     }
 
-    const flowerCount = 3 + Math.floor(seedFromCoords(cx + 71, cz + 19) * 6);
+    const flowerCount = 1 + Math.floor(seedFromCoords(cx + 71, cz + 19) * 3);
     for (let i = 0; i < flowerCount; i++) {
         const stem = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.03, 0.04, 0.28 + Math.random() * 0.18, 6),
+            new THREE.CylinderGeometry(0.03, 0.04, 0.28 + seedFromCoords(cx, cz, i + 30) * 0.18, 6),
             new THREE.MeshStandardMaterial({ color: 0x2f8f2f })
         );
         stem.position.set(
@@ -953,18 +1544,18 @@ function spawnChunk(cx, cz) {
         group.add(stem);
 
         const bloom = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08 + seedFromCoords(cx + i * 2, cz - i * 4) * 0.08, 6, 6),
+            new THREE.SphereGeometry(0.08 + seedFromCoords(cx + i * 2, cz - i * 4, i + 31) * 0.08, 6, 6),
             new THREE.MeshStandardMaterial({ color: [0xff5ca8, 0xffdd57, 0x67e8f9, 0xffffff][i % 4] })
         );
         bloom.position.set(stem.position.x, stem.position.y + 0.22, stem.position.z);
         group.add(bloom);
     }
 
-    const npcCount = seedFromCoords(cx * 3, cz * 9) > 0.35 ? 1 + (seedFromCoords(cx + 13, cz + 9) > 0.8 ? 1 : 0) : 0;
+    const npcCount = seedFromCoords(cx * 3, cz * 9) > 0.55 ? 1 : 0;
     for (let i = 0; i < npcCount; i++) {
-        const npcMesh = makeNpc();
-        const x = 4 + seedFromCoords(cx + 99 + i, cz + 33) * (CHUNK_SIZE - 8);
-        const z = 4 + seedFromCoords(cx + 55 + i, cz + 77) * (CHUNK_SIZE - 8);
+        const npcMesh = makeNpc(cx, cz, i);
+        const x = 4 + seedFromCoords(cx + 99 + i, cz + 33, i + 1) * (CHUNK_SIZE - 8);
+        const z = 4 + seedFromCoords(cx + 55 + i, cz + 77, i + 2) * (CHUNK_SIZE - 8);
         npcMesh.position.set(x, 0, z);
         npcMesh.castShadow = true;
         npcMesh.userData.isNPC = true;
@@ -1082,7 +1673,7 @@ function buildPlayer() {
     playerLegs = [legL, legR];
 
     player.add(playerBody, playerHead, eye1, eye2, armL, armR, legL, legR);
-    player.position.set(0, 1, 0);
+    player.position.set(MEETING_POINT.x, MEETING_POINT.y, MEETING_POINT.z);
     scene.add(player);
 }
 
@@ -1090,29 +1681,33 @@ function startGameEngine() {
     gameActive = true;
     const container = document.getElementById('canvas-container');
     container.innerHTML = '';
+    const startupFallback = document.getElementById('startup-fallback');
+    if (startupFallback) startupFallback.style.display = 'none';
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 35, 180);
+    scene.fog = new THREE.Fog(0x87ceeb, 24, 110);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, cameraHeight, cameraDistance);
+    camera.position.set(0, 4, 8);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.1));
+    renderer.setClearColor(0x87ceeb, 1);
+    renderer.shadowMap.enabled = false;
     container.appendChild(renderer.domElement);
+    renderer.domElement.style.touchAction = 'none';
     setupLookControls();
 
-    hemiLight = new THREE.HemisphereLight(0xffffff, 0x8fd18a, 1.1);
+    hemiLight = new THREE.HemisphereLight(0xffffff, 0x446644, 0.9);
     scene.add(hemiLight);
     sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
     sunLight.position.set(10, 20, 10);
     sunLight.castShadow = true;
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     scene.add(ambientLight);
 
     const sun = new THREE.Mesh(
@@ -1126,18 +1721,21 @@ function startGameEngine() {
         const cloud = new THREE.Group();
         const puffCount = 3 + (i % 3);
         for (let j = 0; j < puffCount; j++) {
+            const puffSize = 1.1 + seedFromCoords(i, j, 200 + j) * 0.7;
             const puff = new THREE.Mesh(
-                new THREE.SphereGeometry(1.1 + Math.random() * 0.7, 10, 10),
+                new THREE.SphereGeometry(puffSize, 10, 10),
                 new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.72 })
             );
-            puff.position.set(j * 1.1, Math.random() * 0.4, Math.random() * 0.4);
+            puff.position.set(j * 1.1, seedFromCoords(i, j, 201) * 0.4, seedFromCoords(i, j, 202) * 0.4);
             cloud.add(puff);
         }
-        cloud.position.set(-40 + i * 14, 25 + Math.random() * 8, -60 + (i % 2) * 18);
+        cloud.position.set(-40 + i * 14, 25 + seedFromCoords(i, i, 203) * 8, -60 + (i % 2) * 18);
         scene.add(cloud);
     }
 
     buildPlayer();
+    player.position.set(0, 1, 0);
+    player.rotation.y = 0;
 
     const meetingPad = new THREE.Mesh(
         new THREE.CylinderGeometry(4.5, 4.5, 0.2, 24),
@@ -1160,7 +1758,7 @@ function startGameEngine() {
     scene.add(meetingGlow);
 
     updateChunks();
-    initMultiplayer();
+    initMultiplayer().catch(err => console.warn('initMultiplayer promise rejected:', err));
     if (!startGameEngine._resizeBound) { window.addEventListener('resize', onWindowResize, false); startGameEngine._resizeBound = true; }
     animate();
 }
@@ -1241,6 +1839,9 @@ function setupLookControls() {
     const target = renderer ? renderer.domElement : null;
     if (!target) return;
 
+    target.style.touchAction = 'none';
+    target.style.cursor = 'grab';
+
     const isUiTarget = (el) => {
         return !!el && (
             el.closest('#mobile-controls') ||
@@ -1253,15 +1854,17 @@ function setupLookControls() {
 
     const down = (e) => {
         if (isUiTarget(e.target)) return;
+        e.preventDefault();
         lookDragging = true;
         lookPointerId = e.pointerId;
         lookLastX = e.clientX;
         lookLastY = e.clientY;
-        target.setPointerCapture?.(e.pointerId);
+        try { target.setPointerCapture(e.pointerId); } catch (_) {}
     };
 
     const move = (e) => {
         if (!lookDragging || e.pointerId !== lookPointerId) return;
+        e.preventDefault();
         const dx = e.clientX - lookLastX;
         const dy = e.clientY - lookLastY;
         lookLastX = e.clientX;
@@ -1271,15 +1874,18 @@ function setupLookControls() {
     };
 
     const up = (e) => {
-        if (e.pointerId !== lookPointerId) return;
+        if (lookPointerId !== null && e.pointerId !== lookPointerId) return;
         lookDragging = false;
         lookPointerId = null;
+        try { target.releasePointerCapture(e.pointerId); } catch (_) {}
     };
 
-    target.addEventListener('pointerdown', down);
-    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerdown', down, { passive: false });
+    target.addEventListener('pointermove', move, { passive: false });
     target.addEventListener('pointerup', up);
     target.addEventListener('pointercancel', up);
+    target.addEventListener('lostpointercapture', up);
+    window.addEventListener('blur', () => { lookDragging = false; lookPointerId = null; });
 }
 
 
@@ -1493,7 +2099,7 @@ function animate() {
     orbit.applyAxisAngle(new THREE.Vector3(0, 1, 0), viewYaw);
     const desired = player.position.clone().add(orbit);
     camera.position.lerp(desired, 0.1);
-    camera.lookAt(player.position.x, player.position.y + 1.6, player.position.z);
+    camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
 
     // player walk animation
     const walk = (moveForward || moveBack || moveLeft || moveRight || Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
