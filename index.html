@@ -1,627 +1,402 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Motor Şehir 3D: Co-Op Rider</title>
-  <style>
-    :root{
-      --bg:#050914; --panel:rgba(10,16,30,.78); --panel2:rgba(11,18,36,.92);
-      --text:#eef5ff; --muted:#95a9c7; --accent:#63d2ff; --accent2:#8cff6b;
-      --danger:#ff6464; --warn:#ffcc57; --shadow:0 18px 50px rgba(0,0,0,.38);
-      --radius:22px;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;height:100%;overflow:hidden;background:
-      radial-gradient(1200px 700px at 50% 0%, #18395f 0%, #09101c 55%, #04060b 100%);
-      color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-    canvas{display:block;width:100%;height:100%}
-    .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:14px;z-index:3}
-    .topbar,.bottombar{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
-    .card{pointer-events:auto;background:linear-gradient(180deg, rgba(18,29,53,.86), rgba(8,13,24,.82));border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow);border-radius:var(--radius);backdrop-filter:blur(12px)}
-    .pill{padding:10px 14px;border-radius:999px;font-weight:800;display:flex;gap:10px;align-items:center}
-    .pill small{color:var(--muted);font-weight:700}
-    .btn{pointer-events:auto;border:none;cursor:pointer;color:#fff;background:linear-gradient(180deg,#1e71ff,#154ed0);padding:12px 16px;border-radius:16px;font-weight:900;letter-spacing:.2px;box-shadow:0 10px 28px rgba(20,81,208,.35)}
-    .btn.secondary{background:linear-gradient(180deg,#253552,#16233a)}
-    .btn.good{background:linear-gradient(180deg,#2bcb72,#1c8f50)}
-    .btn.warn{background:linear-gradient(180deg,#ffb12a,#d97a12)}
-    .btn.danger{background:linear-gradient(180deg,#ff6969,#c82929)}
-    .btn:active{transform:translateY(1px)}
-    .tiny{font-size:12px}.muted{color:var(--muted)}
-    .kbd{display:inline-block;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);font-weight:800}
-    .sep{height:1px;background:rgba(255,255,255,.08);margin:12px 0}
-    .right{margin-left:auto}
-    .floatTag{position:fixed;left:16px;top:16px;z-index:2;pointer-events:none;background:rgba(0,0,0,.18);padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px);font-weight:800}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaGo Hub | Kendi Oyun Dünyan</title>
+    <style>
+        :root {
+            --bg-color: #0f1015;
+            --navbar-bg: #171821;
+            --card-bg: #222330;
+            --accent-color: #00ff88;
+            --text-main: #ffffff;
+            --text-muted: #a0a4b8;
+        }
 
-    .panel{position:fixed;inset:0;display:none;place-items:center;padding:16px;background:rgba(2,6,12,.60);backdrop-filter:blur(7px);z-index:10}
-    .panel.show{display:grid}
-    .modal{width:min(1120px,100%);max-height:min(92vh,980px);overflow:auto;padding:20px;border-radius:28px;background:linear-gradient(180deg,rgba(15,25,46,.98),rgba(6,11,20,.98));border:1px solid rgba(255,255,255,.1);box-shadow:var(--shadow)}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-    .hero{grid-column:span 12;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-    h1,h2,h3,p{margin:0}
-    h1{font-size:clamp(28px,4vw,50px);line-height:1.03}
-    h2{font-size:22px} h3{font-size:16px}
-    .box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:16px}
-    .col-4{grid-column:span 4}.col-6{grid-column:span 6}.col-8{grid-column:span 8}.col-12{grid-column:span 12}
-    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);outline:none}
-    label{display:block;font-size:13px;color:var(--muted);margin-bottom:7px}
-    .shop-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
-    .bikeCard{padding:14px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.08)}
-    .bikeCard .title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
-    .stat{height:8px;background:rgba(255,255,255,.09);border-radius:999px;overflow:hidden}
-    .stat>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),#8cff6b)}
-    .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(15,23,42,.95);padding:11px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow);z-index:30;display:none}
-    .toast.show{display:block;animation:pop .18s ease}
-    @keyframes pop{from{transform:translateX(-50%) translateY(8px);opacity:.3}to{transform:translateX(-50%) translateY(0);opacity:1}}
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    .overlayNote{line-height:1.6;color:#d7e3f7}
-    .barWrap{display:flex;flex-direction:column;gap:6px;min-width:150px}
-    .bar{height:8px;background:rgba(255,255,255,.09);border-radius:999px;overflow:hidden}
-    .bar>span{display:block;height:100%;background:linear-gradient(90deg,#63d2ff,#8cff6b)}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-    .touchControls{position:fixed;left:0;right:0;bottom:0;z-index:25;display:none;pointer-events:none;padding:10px;gap:10px}
-    .touchPad{flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;background:rgba(8,13,24,.55);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(10px);border-radius:20px;padding:10px;pointer-events:auto}
-    .touchPad h4{grid-column:1/-1;margin:0 0 2px;font-size:12px;color:var(--muted);letter-spacing:.4px}
-    .touchBtn{height:54px;border:none;border-radius:16px;font-weight:900;color:#fff;background:linear-gradient(180deg,#22344f,#152238);box-shadow:0 10px 24px rgba(0,0,0,.28)}
-    .touchBtn:active,.touchBtn.active{transform:scale(.98);filter:brightness(1.08)}
-    @media (max-width: 900px), (pointer: coarse){
-      .hud{padding:10px}
-      .topbar,.bottombar{gap:8px}
-      .pill{padding:9px 12px;font-size:14px}
-      .btn{padding:11px 14px;font-size:14px;border-radius:14px}
-      .modal{width:100%;max-height:96vh;padding:16px;border-radius:22px}
-      .grid{grid-template-columns:1fr}
-      .col-4,.col-6,.col-8,.col-12{grid-column:span 12}
-      .row{grid-template-columns:1fr}
-      h1{font-size:clamp(24px,8vw,40px)}
-      .floatTag{display:none}
-      .touchControls{display:flex;flex-direction:column}
-      .card{backdrop-filter:blur(8px)}
-    }
-  </style>
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        /* Üst Menü (Navbar) */
+        .navbar {
+            background-color: var(--navbar-bg);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2a2b38;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #00ff88, #00b8ff);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            color: #000;
+        }
+
+        .brand-name {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        .nav-links a {
+            color: var(--text-main);
+            text-decoration: none;
+            margin-left: 25px;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-color);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--card-bg);
+            padding: 5px 15px 5px 5px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Ana İçerik */
+        .main-container {
+            padding: 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 28px;
+            margin-bottom: 25px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Oyun Izgarası */
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px;
+        }
+
+        .game-card {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 10px 20px rgba(0, 255, 136, 0.1);
+        }
+
+        .game-thumbnail {
+            width: 100%;
+            height: 160px;
+            background: #2a2b38;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            position: relative;
+        }
+
+        .game-thumbnail::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+        }
+
+        .play-btn-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background-color: var(--accent-color);
+            color: #000;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .game-card:hover .play-btn-overlay {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .game-info {
+            padding: 20px;
+        }
+
+        .game-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .game-developer {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .game-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-muted);
+            border-top: 1px solid #2a2b38;
+            padding-top: 15px;
+        }
+
+        /* Modal (Oyun Açılış Ekranı) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--navbar-bg);
+            width: 80%;
+            max-width: 900px;
+            height: 70%;
+            border-radius: 20px;
+            padding: 30px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #2a2b38;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 25px;
+            font-size: 30px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-btn:hover {
+            color: #ff3366;
+        }
+
+        .game-frame-placeholder {
+            flex: 1;
+            background-color: #0a0b0e;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            border: 2px dashed #2a2b38;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #2a2b38;
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <div id="wrap"></div>
-  <div class="floatTag">Motor Şehir 3D</div>
 
-  <div class="hud">
-    <div class="topbar">
-      <div class="card pill" id="p1Hud">P1 <small>Hız</small> <span id="p1Speed">0</span> <small>Coin</small> <span id="p1Coins">0</span> <small>Can</small> <span id="p1Lives">3</span></div>
-      <div class="card pill" id="p2Hud">P2 <small>Hız</small> <span id="p2Speed">0</span> <small>Coin</small> <span id="p2Coins">0</span> <small>Can</small> <span id="p2Lives">3</span></div>
-      <div class="card pill right"><small>Skor</small> <span id="score">0</span> <small>En İyi</small> <span id="best">0</span></div>
-      <button class="btn secondary" id="btnMenu">Menü</button>
-      <button class="btn" id="btnShop">Motor Dükkanı</button>
-      <button class="btn warn" id="btnAdmin">Admin</button>
-    </div>
-    <div class="bottombar">
-      <div class="card" style="padding:12px 14px;max-width:860px">
-        <div class="tiny muted">Telefon Kontrolü</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
-          <span class="kbd">Sol / Sağ</span><span class="kbd">Gaz</span><span class="kbd">Fren</span> <span class="muted">P1 & P2</span>
+    <nav class="navbar">
+        <div class="brand-container">
+            <div class="logo">NG</div>
+            <div class="brand-name">NovaGo Hub</div>
         </div>
-      </div>
-      <div class="card" style="padding:12px 14px;min-width:170px">
-        <div class="tiny muted">Durum</div><div id="statusText" style="font-weight:900;margin-top:4px">Hazır</div>
-      </div>
-      <div class="card" style="padding:12px 14px;min-width:220px">
-        <div class="tiny muted">Ortak Cüzdan</div><div id="wallet" style="font-size:22px;font-weight:900;margin-top:4px">0</div>
-      </div>
-    </div>
-  </div>
+        
+        <div class="nav-links">
+            <a href="#">Keşfet</a>
+            <a href="#">Oluştur</a>
+            <a href="#">Market</a>
+        </div>
 
-  <div class="panel show" id="menuPanel">
-    <div class="modal">
-      <div class="grid">
-        <div class="hero col-12">
-          <div>
-            <h1>Motor Şehir 3D<br/>Co‑Op Rider</h1>
-            <p class="muted" style="margin-top:8px;max-width:700px">İki oyuncu aynı anda şehir trafiğinde yarışıyor. Motor al, yükselt, coin topla, admin yetkisiyle oyunu yönet.</p>
-          </div>
-          <div class="card" style="padding:14px 16px;min-width:290px">
-            <div class="muted tiny">Oyuncu Adları</div>
-            <div class="row" style="margin-top:10px">
-              <input id="name1" maxlength="16" placeholder="P1 adı" />
-              <input id="name2" maxlength="16" placeholder="P2 adı" />
+        <div class="user-profile">
+            <div class="avatar">G</div>
+            <span>GamingAlpPro</span>
+        </div>
+    </nav>
+
+    <main class="main-container">
+        <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
+        
+        <div class="games-grid">
+            
+            <div class="game-card" onclick="openGame('10 Nights at the Market', 'Three.js / Firebase')">
+                <div class="game-thumbnail">
+                    🛒
+                    <div class="play-btn-overlay">▶</div>
+                </div>
+                <div class="game-info">
+                    <div class="game-title">10 Nights at the Market</div>
+                    <div class="game-developer">Geliştirici: GamingAlpPro</div>
+                    <div class="game-stats">
+                        <span>⭐ %95 Beğeni</span>
+                        <span>👥 1.2K Aktif</span>
+                    </div>
+                </div>
             </div>
-            <div class="controls" style="margin-top:10px">
-              <button class="btn good" id="startBtn">Oyunu Başlat</button>
-              <button class="btn secondary" id="resumeBtn">Devam Et</button>
+
+            <div class="game-card" onclick="openGame('Hayatta Kalma Macerası', 'Three.js 3D Engine')">
+                <div class="game-thumbnail">
+                    🏕️
+                    <div class="play-btn-overlay">▶</div>
+                </div>
+                <div class="game-info">
+                    <div class="game-title">Hayatta Kalma Macerası</div>
+                    <div class="game-developer">Geliştirici: NovaGo</div>
+                    <div class="game-stats">
+                        <span>⭐ %88 Beğeni</span>
+                        <span>👥 850 Aktif</span>
+                    </div>
+                </div>
             </div>
-          </div>
+
+            <div class="game-card" onclick="openGame('Balıkçılık Simülatörü', 'Fizik Motoru Aktif')">
+                <div class="game-thumbnail">
+                    🎣
+                    <div class="play-btn-overlay">▶</div>
+                </div>
+                <div class="game-info">
+                    <div class="game-title">Balıkçılık Simülatörü</div>
+                    <div class="game-developer">Geliştirici: GamingAlpPro</div>
+                    <div class="game-stats">
+                        <span>⭐ %92 Beğeni</span>
+                        <span>👥 340 Aktif</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-card" onclick="openGame('Blok Evreni Düzenleyici', 'WorldEdit Entegrasyonu')">
+                <div class="game-thumbnail">
+                    🧱
+                    <div class="play-btn-overlay">▶</div>
+                </div>
+                <div class="game-info">
+                    <div class="game-title">Blok Evreni Düzenleyici</div>
+                    <div class="game-developer">Geliştirici: NovaGo</div>
+                    <div class="game-stats">
+                        <span>⭐ %98 Beğeni</span>
+                        <span>👥 2.1K Aktif</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
-        <div class="col-8 box">
-          <h2>Nasıl oynanır</h2>
-          <p class="overlayNote" style="margin-top:10px">Yolun içinde kal, arabaları geç, coin topla. P1 sol tarafta, P2 sağ tarafta başlar. Çarpınca can gider; canlar biterse oyun biter. Dükkan kısmından motor değiştirip hız, ivme ve zırh yükseltebilirsin.</p>
-          <div class="sep"></div>
-          <p class="overlayNote"><strong>Admin:</strong> kullanıcı adın <span class="kbd">admin</span> ise yönetim paneli açılır. Oradan coin ekle, tüm motorları aç, oyun hızını ayarla.</p>
+    </main>
+
+    <div class="modal" id="gameModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeGame()">&times;</span>
+            <h2 id="modalGameTitle" style="color: var(--text-main);">Oyun Yükleniyor...</h2>
+            <p id="modalGameTech" style="color: var(--text-muted); margin-top: 5px;"></p>
+            
+            <div class="game-frame-placeholder">
+                <div class="loading-spinner"></div>
+                <h3 style="margin-bottom: 10px;">Sunucuya Bağlanılıyor...</h3>
+                <p style="color: var(--text-muted); text-align: center;">Gerçek oyun dosyalarını (örn: game1.html) buraya bir &lt;iframe&gt; ile bağlayabilirsin.</p>
+            </div>
         </div>
-        <div class="col-4 box">
-          <h2>Firebase</h2>
-          <p class="overlayNote" style="margin-top:10px">Dosya tek başına çalışır. Firebase iskeleti içeride; istersen sonradan skor ve kayıt eklenir.</p>
-        </div>
-      </div>
     </div>
-  </div>
 
-  <div class="panel" id="shopPanel">
-    <div class="modal">
-      <div class="hero">
-        <div>
-          <h1>Motor Dükkanı</h1>
-          <p class="muted" style="margin-top:8px">Motor seç, yükselt, kaydet. Coin yetmezse biraz daha trafik ez.</p>
-        </div>
-        <div class="card pill"><small>Cüzdan</small> <span id="wallet2">0</span></div>
-      </div>
-      <div class="sep"></div>
-      <div class="shop-list" id="shopList"></div>
-      <div class="sep"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
-        <button class="btn secondary" id="closeShop">Kapat</button>
-      </div>
-    </div>
-  </div>
+    <script>
+        const modal = document.getElementById("gameModal");
+        const titleElement = document.getElementById("modalGameTitle");
+        const techElement = document.getElementById("modalGameTech");
 
-  <div class="panel" id="adminPanel">
-    <div class="modal">
-      <div class="hero">
-        <div>
-          <h1>Admin Panel</h1>
-          <p class="muted" style="margin-top:8px">Yalnızca kullanıcı adın <strong>admin</strong> ise açıktır.</p>
-        </div>
-        <button class="btn secondary" id="closeAdmin">Kapat</button>
-      </div>
-      <div class="sep"></div>
-      <div class="grid">
-        <div class="col-6 box">
-          <h2>Hızlı Ayar</h2>
-          <div class="row" style="margin-top:12px">
-            <div><label>Coin Ekle</label><input id="adminCoins" type="number" value="1000" /></div>
-            <div><label>Oyun Hızı</label><input id="adminSpeed" type="number" value="1" step="0.1" min="0.5" max="3" /></div>
-          </div>
-          <div class="controls" style="margin-top:12px">
-            <button class="btn good" id="giveCoins">Coin Ver</button>
-            <button class="btn warn" id="unlockAll">Hepsini Aç</button>
-          </div>
-        </div>
-        <div class="col-6 box">
-          <h2>Yönetim</h2>
-          <p class="overlayNote" style="margin-top:10px">Buradan oyunu test etmek kolay. İstersen sonra online oda, arkadaş daveti ve kayıt sistemi de eklenebilir.</p>
-          <div class="sep"></div>
-          <button class="btn danger" id="resetSave">Kayıtları Sıfırla</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
-  <div class="touchControls">
-    <div class="touchPad" id="padP1">
-      <h4>P1 Kontrol</h4>
-      <button class="touchBtn" data-touch="p1-left">Sol</button>
-      <button class="touchBtn" data-touch="p1-right">Sağ</button>
-      <button class="touchBtn" data-touch="p1-accel">Gaz</button>
-      <button class="touchBtn" data-touch="p1-brake">Fren</button>
-    </div>
-    <div class="touchPad" id="padP2">
-      <h4>P2 Kontrol</h4>
-      <button class="touchBtn" data-touch="p2-left">Sol</button>
-      <button class="touchBtn" data-touch="p2-right">Sağ</button>
-      <button class="touchBtn" data-touch="p2-accel">Gaz</button>
-      <button class="touchBtn" data-touch="p2-brake">Fren</button>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-
-    const lowPower = matchMedia('(max-width: 900px)').matches || matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyA3r0cvDZ5R6nyjN0UKW8zy_cbuvx8YhKM",
-      authDomain: "traffic-8da63.firebaseapp.com",
-      projectId: "traffic-8da63",
-      storageBucket: "traffic-8da63.firebasestorage.app",
-      messagingSenderId: "295572062519",
-      appId: "1:295572062519:web:ec0c1a639c63ceda139ab2",
-      measurementId: "G-YFKSQWS0F7"
-    };
-    try {
-      const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js');
-      const app = initializeApp(firebaseConfig);
-      try { const { getAnalytics } = await import('https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js'); getAnalytics(app); } catch {}
-    } catch (e) { console.warn('Firebase başlatılamadı:', e); }
-
-    const ui = {
-      score: document.getElementById('score'), best: document.getElementById('best'), statusText: document.getElementById('statusText'),
-      p1Speed: document.getElementById('p1Speed'), p2Speed: document.getElementById('p2Speed'),
-      p1Coins: document.getElementById('p1Coins'), p2Coins: document.getElementById('p2Coins'),
-      p1Lives: document.getElementById('p1Lives'), p2Lives: document.getElementById('p2Lives'),
-      wallet: document.getElementById('wallet'), wallet2: document.getElementById('wallet2'),
-      toast: document.getElementById('toast'), menuPanel: document.getElementById('menuPanel'),
-      shopPanel: document.getElementById('shopPanel'), adminPanel: document.getElementById('adminPanel'),
-      name1: document.getElementById('name1'), name2: document.getElementById('name2'),
-      shopList: document.getElementById('shopList'), adminCoins: document.getElementById('adminCoins'),
-      adminSpeed: document.getElementById('adminSpeed')
-    };
-
-    const STORE_KEY = 'motor_sehri_3d_save_v3';
-    const defaultState = { best:0, coins:0, selectedBike:'street', owned:['street'], speedMultiplier:1, p1Name:'P1', p2Name:'P2' };
-    const load = () => { try { return { ...defaultState, ...JSON.parse(localStorage.getItem(STORE_KEY) || '{}') }; } catch { return { ...defaultState }; } };
-    let saveState = load();
-
-    const bikes = {
-      street:{name:'Street 125', price:0, top:52, accel:34, brake:45, armor:1, color:0x58d8ff, glow:0x7de8ff},
-      racer:{name:'Racer 250', price:600, top:62, accel:40, brake:50, armor:1, color:0x8cff6b, glow:0xb0ff8f},
-      beast:{name:'Beast 500', price:1400, top:70, accel:46, brake:56, armor:2, color:0xffcc57, glow:0xffe29a},
-      phantom:{name:'Phantom X', price:3200, top:78, accel:52, brake:62, armor:3, color:0xff6464, glow:0xff8e8e}
-    };
-
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x09111d);
-    scene.fog = new THREE.Fog(0x07111f, 18, 180);
-
-    const camera = new THREE.PerspectiveCamera(lowPower ? 58 : 62, innerWidth / innerHeight, 0.1, 800);
-    camera.position.set(0, lowPower ? 8.3 : 7.5, lowPower ? 15.5 : 14);
-
-    const renderer = new THREE.WebGLRenderer({ antialias: !lowPower, alpha:true, powerPreference: lowPower ? 'low-power' : 'high-performance' });
-    renderer.setSize(innerWidth, innerHeight);
-    renderer.setPixelRatio(lowPower ? 1 : Math.min(devicePixelRatio, 1.6));
-    renderer.shadowMap.enabled = !lowPower;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.getElementById('wrap').appendChild(renderer.domElement);
-
-    scene.add(new THREE.AmbientLight(0x9bb7ff, 1.0));
-    scene.add(new THREE.HemisphereLight(0x8ad5ff, 0x0a1020, 1.0));
-    const sun = new THREE.DirectionalLight(0xffffff, 2.3);
-    sun.position.set(-8, 18, 10);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(lowPower ? 1024 : 2048, lowPower ? 1024 : 2048);
-    sun.shadow.camera.near = 1; sun.shadow.camera.far = 60;
-    sun.shadow.camera.left = -24; sun.shadow.camera.right = 24; sun.shadow.camera.top = 24; sun.shadow.camera.bottom = -24;
-    scene.add(sun);
-
-    const wrap = new THREE.Group();
-    scene.add(wrap);
-
-    const world = { running:false, paused:false, over:false, time:0, roadSpeed:32, spawnTimer:0, coinTimer:0, shake:0, score:0, best:saveState.best||0, streak:0, coinValue:25 };
-
-    const touch = { 'p1-left':false,'p1-right':false,'p1-accel':false,'p1-brake':false,'p2-left':false,'p2-right':false,'p2-accel':false,'p2-brake':false };
-
-    const clock = new THREE.Clock();
-    const laneXs = [-5.2, -1.9, 1.9, 5.2];
-    const roadWidth = 14, roadLen = 30;
-    const roadSegments = [], laneLines = [], sideBuildings = [], lamps = [], traffic = [], coins = [], stars = [];
-
-    function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-    function rand(a,b){ return a + Math.random()*(b-a); }
-    function choice(arr){ return arr[(Math.random()*arr.length)|0]; }
-    function toast(msg){ ui.toast.textContent = msg; ui.toast.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(()=>ui.toast.classList.remove('show'), 1800); }
-    function persist(){ saveState.p1Name = p1Data.name; saveState.p2Name = p2Data.name; saveState.best = Math.max(saveState.best||0, world.best||0); localStorage.setItem(STORE_KEY, JSON.stringify(saveState)); ui.best.textContent = saveState.best||0; ui.wallet.textContent = saveState.coins||0; ui.wallet2.textContent = saveState.coins||0; }
-    function addCoins(n){ saveState.coins = Math.max(0, (saveState.coins||0)+n); persist(); }
-
-    function mat(color, emissive=0x000000, metalness=.2, roughness=.4){ return new THREE.MeshStandardMaterial({ color, emissive, metalness, roughness }); }
-    function buildBike(colorHex, glowHex){
-      const g = new THREE.Group();
-      const body = mat(colorHex, glowHex, .35, .28), dark = mat(0x141820, 0x000000, .1, .7), metal = mat(0xcfd8e6, 0x000000, .8, .18);
-      const glass = new THREE.MeshPhysicalMaterial({ color:0xcfe8ff, transparent:true, opacity:.35, roughness:.05, metalness:0, transmission:.3 });
-      const base = new THREE.Mesh(new THREE.BoxGeometry(1.7,.45,3), body); base.position.y=1.05; base.castShadow=true; g.add(base);
-      const tank = new THREE.Mesh(new THREE.BoxGeometry(1.15,.55,1.25), body); tank.position.set(0,1.32,.2); tank.castShadow=true; g.add(tank);
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(1,.22,1), dark); seat.position.set(0,1.55,-.62); seat.castShadow=true; g.add(seat);
-      const head = new THREE.Mesh(new THREE.BoxGeometry(1.05,.6,.9), body); head.position.set(0,1.18,1.05); head.castShadow=true; g.add(head);
-      const wind = new THREE.Mesh(new THREE.BoxGeometry(.8,.48,.08), glass); wind.position.set(0,1.55,1.35); g.add(wind);
-      const handle = new THREE.Mesh(new THREE.BoxGeometry(1.55,.12,.12), metal); handle.position.set(0,1.68,1.0); g.add(handle);
-      const fork = new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,1,10), metal); fork.rotation.z = Math.PI/2; fork.position.set(0,.92,1.2); g.add(fork);
-      const wheelMat = mat(0x11131a, 0x000000, .05, .9), rimMat = mat(0xe8eefc, 0x000000, .8, .2);
-      const wheelGeo = new THREE.CylinderGeometry(.58,.58,.28,18), rimGeo = new THREE.TorusGeometry(.58,.1,10,18);
-      const wheel1 = new THREE.Mesh(wheelGeo, wheelMat); wheel1.rotation.z = Math.PI/2; wheel1.position.set(0,.48,1.02); wheel1.castShadow=true; g.add(wheel1);
-      const rim1 = new THREE.Mesh(rimGeo, rimMat); rim1.rotation.y = Math.PI/2; rim1.position.copy(wheel1.position); g.add(rim1);
-      const wheel2 = new THREE.Mesh(wheelGeo, wheelMat); wheel2.rotation.z = Math.PI/2; wheel2.position.set(0,.48,-1.02); wheel2.castShadow=true; g.add(wheel2);
-      const rim2 = new THREE.Mesh(rimGeo, rimMat); rim2.rotation.y = Math.PI/2; rim2.position.copy(wheel2.position); g.add(rim2);
-      const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,1.2,12), metal); exhaust.rotation.z = Math.PI/2; exhaust.position.set(-.72,1,-.25); g.add(exhaust);
-      const headLight = new THREE.PointLight(glowHex, 2.4, 14, 1.8); headLight.position.set(0,1.2,1.6); g.add(headLight);
-      g.userData.parts = { wheel1, wheel2, headLight };
-      g.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; }});
-      return g;
-    }
-    function buildCar(){
-      const g = new THREE.Group();
-      const color = choice([0xff6464,0x58d8ff,0xffcc57,0x8cff6b,0xd46bff,0xf2f5ff]);
-      const body = mat(color, 0x000000, .2, .35), glass = new THREE.MeshPhysicalMaterial({ color:0xcfe8ff, transparent:true, opacity:.34, roughness:.1, metalness:0, transmission:.2 }), dark = mat(0x11151c,0x000000,.05,.8);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.8,1,3.2), body); mesh.position.y=.9; mesh.castShadow=true; g.add(mesh);
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.45,.85,1.35), glass); cabin.position.set(0,1.45,-.2); cabin.castShadow=true; g.add(cabin);
-      const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.9,.25,.26), dark); bumper.position.set(0,.55,1.63); g.add(bumper);
-      const wheelGeo = new THREE.CylinderGeometry(.28,.28,.22,14), wheelMat = mat(0x0f1117,0x000000,.05,.9);
-      [[-0.95,.35,1.15],[0.95,.35,1.15],[-0.95,.35,-1.15],[0.95,.35,-1.15]].forEach(p => { const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI/2; w.position.set(...p); w.castShadow=true; g.add(w); });
-      const head = new THREE.PointLight(0xffffff, 0.9, 10, 2); head.position.set(0,.8,1.8); g.add(head);
-      g.userData.radius = 1.15;
-      return g;
-    }
-    function buildCoin(){
-      const g = new THREE.Group();
-      const m = new THREE.MeshStandardMaterial({ color:0xffd857, emissive:0xffcc33, emissiveIntensity:.65, metalness:.85, roughness:.25 });
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(.55,.18,12,22), m); ring.rotation.x = Math.PI/2; g.add(ring);
-      const core = new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.16,18), new THREE.MeshStandardMaterial({ color:0xfff4ba, emissive:0xffe16a, emissiveIntensity:.35, metalness:.55, roughness:.25 })); core.rotation.x = Math.PI/2; g.add(core);
-      return g;
-    }
-
-    function roadSegment(z){
-      const g = new THREE.Group();
-      const asphalt = new THREE.Mesh(new THREE.BoxGeometry(roadWidth,.22,roadLen), new THREE.MeshStandardMaterial({ color:0x1a1f27, roughness:.94, metalness:.02 })); asphalt.receiveShadow = true; g.add(asphalt);
-      const edgeMat = mat(0xd2dbe8,0x000000,.0,.5);
-      const left = new THREE.Mesh(new THREE.BoxGeometry(.24,.24,roadLen), edgeMat); left.position.x = -roadWidth/2 - .12; left.position.y=.01; g.add(left);
-      const right = left.clone(); right.position.x = roadWidth/2 + .12; g.add(right);
-      [-2,0,2].forEach(x => { if (x===0) return; const dash = new THREE.Mesh(new THREE.BoxGeometry(.16,.05,4.5), mat(0xf3f6fb,0x223344,.0,.35)); dash.position.set(x*2, .13, 0); g.add(dash); });
-      const glow = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth*.72, roadLen), new THREE.MeshBasicMaterial({ color:0x63d2ff, transparent:true, opacity:.06 })); glow.rotation.x = -Math.PI/2; glow.position.y=.12; g.add(glow);
-      g.position.z = z; wrap.add(g); roadSegments.push(g); return g;
-    }
-    function building(x,z,h,w,d){
-      const m = mat(choice([0x0e1522,0x101b2d,0x13243c]),0x000000,.12,.82);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), m); mesh.position.set(x,h/2,z); mesh.castShadow=!lowPower; mesh.receiveShadow=true; scene.add(mesh);
-      let light = null;
-      if(!lowPower){
-        light = new THREE.PointLight(choice([0x63d2ff,0xffcc57,0x8cff6b]), rand(.6,1.5), 26, 2);
-        light.position.set(x+rand(-.4,.4), h*.7, z+rand(-.4,.4)); scene.add(light);
-      }
-      return {mesh,light};
-    }
-    function lampPost(x,z){
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(.14,.18,2.2,10), mat(0xb8c6d9,0x000000,.7,.25)); base.position.set(x,1.1,z); base.castShadow=true; scene.add(base);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(1,.12,.12), mat(0xf2f4ff,0x223355,.0,.08)); top.position.set(x,2.1,z); scene.add(top);
-      const light = new THREE.PointLight(0x63d2ff, lowPower ? .55 : 1.2, lowPower ? 11 : 16, 2); light.position.set(x,2.0,z); scene.add(light);
-      return {base,top,light};
-    }
-
-    const roadCount = lowPower ? 7 : 10;
-    const lineCount = lowPower ? 8 : 12;
-    const buildingCount = lowPower ? 18 : 32;
-    const lampCount = lowPower ? 9 : 14;
-    const starCount = lowPower ? 70 : 140;
-    for(let i=0;i<roadCount;i++) roadSegment(-i*roadLen);
-    for(let i=0;i<lineCount;i++){ const line = new THREE.Mesh(new THREE.BoxGeometry(.2,.05,8), mat(0xffffff,0x224466,.0,.1)); line.position.set(0,.13,-18 - i*22); wrap.add(line); laneLines.push(line); }
-    for(let i=0;i<buildingCount;i++){ const side = i%2===0 ? -1 : 1; sideBuildings.push(building(side*rand(13,22), -30 - i*18, rand(4,16), rand(4,8), rand(4,8))); }
-    for(let i=0;i<lampCount;i++){ lamps.push(lampPost(-8.6, -i*20 - 12)); lamps.push(lampPost(8.6, -i*20 - 12)); }
-    for(let i=0;i<starCount;i++){ const s = new THREE.Mesh(new THREE.SphereGeometry(rand(.03,.08),6,6), new THREE.MeshBasicMaterial({ color: choice([0xffffff,0x8ad5ff,0xb8ffda]) })); s.position.set(rand(-60,60), rand(18,60), rand(-150,80)); scene.add(s); stars.push(s); }
-
-    function bikeState(name, side){
-      const b = bikes[saveState.selectedBike] || bikes.street;
-      return { name, side, x: side===0 ? -3.6 : 3.6, vx:0, speed:0, maxSpeed:b.top, accel:b.accel, brake:b.brake, armor:b.armor, color:b.color, glow:b.glow, coins:0, lives:3, invuln:0, alive:true, score:0, boost:0 };
-    }
-    let p1Data = bikeState(saveState.p1Name, 0);
-    let p2Data = bikeState(saveState.p2Name, 1);
-    const p1 = buildBike(bikes[saveState.selectedBike].color, bikes[saveState.selectedBike].glow);
-    const p2 = buildBike(bikes[saveState.selectedBike].color, bikes[saveState.selectedBike].glow);
-    scene.add(p1, p2);
-    p1.position.set(p1Data.x,0.02,2.8); p2.position.set(p2Data.x,0.02,2.8);
-
-    function applyBikeStats(){
-      const b = bikes[saveState.selectedBike] || bikes.street;
-      [p1,p2].forEach(m => {
-        m.traverse(o => { if (o.isMesh && o.material && o.material.color) o.material.color.setHex(b.color); });
-        if (m.userData.parts) m.userData.parts.headLight.color.setHex(b.glow);
-      });
-      [p1Data,p2Data].forEach(p => { p.maxSpeed = b.top; p.accel = b.accel; p.brake = b.brake; p.armor = b.armor; p.color = b.color; p.glow = b.glow; });
-    }
-    applyBikeStats();
-
-    function resetPlayers(){
-      p1Data = bikeState(saveState.p1Name || 'P1', 0);
-      p2Data = bikeState(saveState.p2Name || 'P2', 1);
-      applyBikeStats();
-      p1.position.set(p1Data.x,0.02,2.8); p2.position.set(p2Data.x,0.02,2.8);
-      p1.rotation.set(0,0,0); p2.rotation.set(0,0,0);
-    }
-
-    function spawnTraffic(){
-      const car = buildCar();
-      car.position.set(choice(laneXs), 0, -140 - rand(0,40));
-      car.userData.speed = rand(world.roadSpeed*.72, world.roadSpeed*1.08);
-      scene.add(car); traffic.push(car);
-    }
-    function spawnCoins(){
-      const lane = choice(laneXs), count = Math.random() < .7 ? 3 : 5;
-      for(let i=0;i<count;i++){ const c = buildCoin(); c.position.set(lane + rand(-.2,.2), 1.6 + i*.25, -130 - i*10); c.userData.spin = rand(2.5, 5.5); scene.add(c); coins.push(c); }
-    }
-
-    function crashPlayer(player, mesh){
-      if(player.invuln > 0 || !player.alive) return;
-      player.lives -= 1; player.invuln = 1.8; player.vx *= .3; player.speed *= .35; world.shake = 0.65; world.streak = 0;
-      ui.statusText.textContent = `${player.name} kaza yaptı`; toast(`${player.name} çarptı`);
-      if(mesh) mesh.rotation.z = rand(-.15,.15);
-      if(player.lives <= 0) player.alive = false;
-      if(!p1Data.alive && !p2Data.alive){ world.over = true; world.running = false; ui.statusText.textContent = 'Oyun bitti'; toast('Oyun bitti'); }
-    }
-
-    function circleHit(ax,az,ar,bx,bz,br){ const dx = ax-bx, dz = az-bz; return dx*dx + dz*dz < (ar+br)*(ar+br); }
-
-    function updateOne(data, mesh, dt, input){
-      if(!world.running || world.paused || world.over) return;
-      if(!data.alive){
-        mesh.rotation.z = Math.sin(performance.now()*0.006) * 0.04;
-        mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, data.x, .06);
-        return;
-      }
-      const accel = data.accel * (input.boost ? 1.25 : 1), brake = data.brake * (input.brake ? 1.35 : 1);
-      if(input.left) data.vx -= 18*dt;
-      if(input.right) data.vx += 18*dt;
-      data.vx *= Math.pow(0.0009, dt);
-      if(input.accel) data.speed += accel*dt; else data.speed -= 18*dt;
-      if(input.brake) data.speed -= brake*dt;
-      data.speed = clamp(data.speed, 0, data.maxSpeed * (input.boost ? 1.08 : 1));
-      if(input.boost && data.boost <= 0 && data.speed > 18) data.boost = 1.1;
-      if(data.boost > 0) data.boost -= dt;
-      data.x = clamp(data.x + data.vx*dt*1.7, -6.1, 6.1);
-      data.score += data.speed * dt * 2.1;
-      if(data.invuln > 0) data.invuln -= dt;
-      mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, data.x, 0.18);
-      mesh.rotation.y = THREE.MathUtils.lerp(mesh.rotation.y, data.vx * .008, 0.12);
-      mesh.rotation.z = THREE.MathUtils.lerp(mesh.rotation.z, -data.vx * .02, 0.12);
-      if(mesh.userData.parts) { mesh.userData.parts.wheel1.rotation.x -= data.speed*dt*2.8; mesh.userData.parts.wheel2.rotation.x -= data.speed*dt*2.8; }
-    }
-
-    function restartGame(){
-      resetPlayers();
-      world.running = true; world.paused = false; world.over = false; world.time = 0; world.roadSpeed = 32 * (saveState.speedMultiplier || 1); world.spawnTimer = 0; world.coinTimer = 0; world.shake = 0; world.score = 0; world.streak = 0;
-      traffic.splice(0).forEach(o => scene.remove(o)); coins.splice(0).forEach(o => scene.remove(o));
-      ui.menuPanel.classList.remove('show'); ui.shopPanel.classList.remove('show'); ui.adminPanel.classList.remove('show');
-      ui.statusText.textContent = 'Yolda'; toast('Oyun başladı'); persist();
-    }
-    function togglePause(){ if(!world.running) return; world.paused = !world.paused; ui.statusText.textContent = world.paused ? 'Duraklatıldı' : 'Yolda'; toast(world.paused ? 'Duraklatıldı' : 'Devam'); }
-
-    function openMenu(){ ui.menuPanel.classList.add('show'); } function closeMenu(){ ui.menuPanel.classList.remove('show'); }
-    function openShop(){ renderShop(); ui.shopPanel.classList.add('show'); } function closeShop(){ ui.shopPanel.classList.remove('show'); }
-    function openAdmin(){ const ok = (p1Data.name || '').toLowerCase() === 'admin' || (p2Data.name || '').toLowerCase() === 'admin'; if(!ok) return toast('Admin adı gerekli'); ui.adminPanel.classList.add('show'); }
-    function closeAdmin(){ ui.adminPanel.classList.remove('show'); }
-
-    function renderShop(){
-      ui.shopList.innerHTML = ''; ui.wallet.textContent = saveState.coins || 0; ui.wallet2.textContent = saveState.coins || 0;
-      Object.entries(bikes).forEach(([id,b]) => {
-        const owned = (saveState.owned || []).includes(id), selected = saveState.selectedBike === id;
-        const card = document.createElement('div');
-        card.className = 'bikeCard';
-        card.innerHTML = `
-          <div class="title">
-            <div><h3>${b.name}</h3><div class="tiny muted">${id.toUpperCase()}</div></div>
-            <div style="text-align:right"><div style="font-weight:900">${b.price===0 ? 'Ücretsiz' : b.price + ' coin'}</div><div class="tiny">★</div></div>
-          </div>
-          <div style="margin-top:10px"><div class="tiny muted">Hız</div><div class="stat"><span style="width:${Math.round((b.top/80)*100)}%"></span></div></div>
-          <div style="margin-top:10px"><div class="tiny muted">İvme</div><div class="stat"><span style="width:${Math.round((b.accel/60)*100)}%"></span></div></div>
-          <div style="margin-top:10px"><div class="tiny muted">Zırh</div><div class="stat"><span style="width:${Math.round((b.armor/3)*100)}%"></span></div></div>
-          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-            <button class="btn ${selected ? 'good' : 'secondary'}" data-act="select" data-id="${id}">${selected ? 'Seçili' : 'Seç'}</button>
-            <button class="btn ${owned ? 'secondary' : 'warn'}" data-act="buy" data-id="${id}" ${owned || b.price===0 ? 'disabled' : ''}>${owned || b.price===0 ? 'Sahip Olundu' : 'Satın Al'}</button>
-          </div>`;
-        ui.shopList.appendChild(card);
-      });
-      ui.shopList.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
-        const id = btn.dataset.id, act = btn.dataset.act, b = bikes[id];
-        if(act === 'buy'){
-          if((saveState.coins || 0) < b.price) return toast('Yetersiz coin');
-          saveState.coins -= b.price; saveState.owned = Array.from(new Set([...(saveState.owned || []), id])); saveState.selectedBike = id; persist(); applyBikeStats(); restartGame(); renderShop(); toast(`${b.name} alındı`);
-        } else if(act === 'select'){
-          if(!(saveState.owned || []).includes(id)) return toast('Önce satın al');
-          saveState.selectedBike = id; persist(); applyBikeStats(); restartGame(); renderShop(); toast(`${b.name} seçildi`);
+        // Oyuna Tıklandığında Modal'ı Aç
+        function openGame(gameName, techDetails) {
+            titleElement.innerText = gameName;
+            techElement.innerText = "Motor: " + techDetails;
+            modal.style.display = "flex";
+            
+            // İstersen burada iframe kaynağını değiştirecek kodlar yazabilirsin
+            // Örnek: document.getElementById("myIframe").src = gameName + ".html";
         }
-      }));
-    }
 
-    function updateWorld(dt){
-      if(!world.running || world.paused || world.over) return;
-      world.time += dt; world.roadSpeed = 32 * (saveState.speedMultiplier || 1);
-      world.spawnTimer -= dt; world.coinTimer -= dt;
-      if(world.spawnTimer <= 0){ spawnTraffic(); if(!lowPower && Math.random() < .28) spawnTraffic(); world.spawnTimer = lowPower ? rand(.9, 1.4) : rand(.65, 1.05); }
-      if(world.coinTimer <= 0){ if(Math.random() < (.82 - (lowPower ? .12 : 0))) spawnCoins(); world.coinTimer = lowPower ? rand(1.3, 2.0) : rand(1.0, 1.8); }
-
-      const input1 = { left: touch['p1-left'], right: touch['p1-right'], accel: touch['p1-accel'], brake: touch['p1-brake'], boost: false };
-      const input2 = { left: touch['p2-left'], right: touch['p2-right'], accel: touch['p2-accel'], brake: touch['p2-brake'], boost: false };
-      updateOne(p1Data, p1, dt, input1); updateOne(p2Data, p2, dt, input2);
-
-      const mv = world.roadSpeed * dt;
-      wrap.children.forEach(obj => { obj.position.z += mv; if(obj.position.z > 24) obj.position.z -= 260; });
-      laneLines.forEach(line => { line.position.z += mv; if(line.position.z > 12) line.position.z -= 260; });
-      sideBuildings.forEach(b => { b.mesh.position.z += mv * .95; if(b.light) b.light.position.z += mv * .95; if(b.mesh.position.z > 26){ b.mesh.position.z -= 620; if(b.light) b.light.position.z -= 620; b.mesh.position.x = b.mesh.position.x > 0 ? rand(13,22) : -rand(13,22); b.mesh.scale.setScalar(rand(.88,1.12)); } });
-      lamps.forEach(p => { p.base.position.z += mv*.97; p.top.position.z += mv*.97; p.light.position.z += mv*.97; if(p.base.position.z > 26){ p.base.position.z -= 420; p.top.position.z -= 420; p.light.position.z -= 420; } });
-
-      for(let i=traffic.length-1;i>=0;i--){
-        const car = traffic[i];
-        car.position.z += (world.roadSpeed + car.userData.speed) * dt;
-        car.rotation.y = Math.sin(world.time * .8 + i) * .03;
-        if(car.position.z > 30){ scene.remove(car); traffic.splice(i,1); continue; }
-        if(car.position.z > 1.2 && car.position.z < 4.0){
-          if(p1Data.alive && Math.abs(car.position.x - p1Data.x) < 1.55) crashPlayer(p1Data, p1);
-          if(p2Data.alive && Math.abs(car.position.x - p2Data.x) < 1.55) crashPlayer(p2Data, p2);
+        // Çarpıya Basınca Kapat
+        function closeGame() {
+            modal.style.display = "none";
         }
-      }
 
-      for(let i=coins.length-1;i>=0;i--){
-        const coin = coins[i];
-        coin.position.z += world.roadSpeed * dt;
-        coin.rotation.y += dt * 3.2; coin.rotation.x += dt * 1.4; coin.position.y = 1.6 + Math.sin(world.time * 5 + i) * .15;
-        let collected = false;
-        if(p1Data.alive && circleHit(coin.position.x, coin.position.z, .9, p1Data.x, 2.8, 1.1)) collected = true;
-        if(p2Data.alive && circleHit(coin.position.x, coin.position.z, .9, p2Data.x, 2.8, 1.1)) collected = true;
-        if(collected){ scene.remove(coin); coins.splice(i,1); addCoins(world.coinValue); world.score += world.coinValue; world.streak++; if(world.streak % 10 === 0) toast(`Streak x${world.streak / 10}`); }
-        else if(coin.position.z > 30){ scene.remove(coin); coins.splice(i,1); }
-      }
+        // Modal dışına tıklayınca kapatma
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeGame();
+            }
+        }
+    </script>
 
-      const total = Math.floor(world.score + p1Data.score + p2Data.score + world.time * 2);
-      if(total > world.best){ world.best = total; saveState.best = total; persist(); }
-      ui.score.textContent = total; ui.best.textContent = world.best;
-      ui.p1Speed.textContent = Math.round(p1Data.speed); ui.p2Speed.textContent = Math.round(p2Data.speed);
-      ui.p1Coins.textContent = p1Data.coins; ui.p2Coins.textContent = p2Data.coins;
-      ui.p1Lives.textContent = Math.max(0, p1Data.lives); ui.p2Lives.textContent = Math.max(0, p2Data.lives);
-      ui.wallet.textContent = saveState.coins || 0; ui.wallet2.textContent = saveState.coins || 0;
-    }
-
-    function updateCamera(dt){
-      const targetX = (p1Data.x + p2Data.x) * 0.5;
-      const avgSpeed = (p1Data.speed + p2Data.speed) * 0.5;
-      camera.position.x += (targetX * .16 - camera.position.x) * (dt * 3.5 + .06);
-      camera.position.y += ((7.6 + avgSpeed * .015) - camera.position.y) * (dt * 2.0 + .05);
-      camera.lookAt(targetX * .10, 1.45, -10);
-      if(world.shake > 0){ camera.position.x += rand(-world.shake, world.shake); camera.position.y += rand(-world.shake, world.shake) * .4; world.shake = Math.max(0, world.shake - dt * 1.8); }
-    }
-
-    function renderFrame(){
-      const dt = Math.min(clock.getDelta(), 0.033);
-      updateWorld(dt); updateCamera(dt);
-      const lean1 = clamp(p1Data.vx * .02, -.35, .35), lean2 = clamp(p2Data.vx * .02, -.35, .35);
-      p1.position.set(p1Data.x, 0.02 + Math.sin(world.time * 8) * .01, 2.8);
-      p1.rotation.z = THREE.MathUtils.lerp(p1.rotation.z, -lean1, .12); p1.rotation.y = THREE.MathUtils.lerp(p1.rotation.y, .03 + p1Data.vx * .008, .12);
-      p2.position.set(p2Data.x, 0.02 + Math.sin(world.time * 8 + 1.5) * .01, 2.8);
-      p2.rotation.z = THREE.MathUtils.lerp(p2.rotation.z, -lean2, .12); p2.rotation.y = THREE.MathUtils.lerp(p2.rotation.y, -.03 + p2Data.vx * .008, .12);
-      const glowPulse = 1.1 + Math.sin(world.time * 7) * .2;
-      p1.traverse(o => { if(o.isPointLight) o.intensity = glowPulse * 2.1; });
-      p2.traverse(o => { if(o.isPointLight) o.intensity = glowPulse * 2.1; });
-      stars.forEach((s,i) => { s.position.z += world.roadSpeed * dt * .15; if(s.position.z > 90) s.position.z -= 260; s.material.opacity = .7 + Math.sin(world.time * 2 + i) * .3; });
-      renderer.render(scene, camera);
-      requestAnimationFrame(renderFrame);
-    }
-    requestAnimationFrame(renderFrame);
-
-    function resize(){ camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); renderer.setPixelRatio(lowPower ? 1 : Math.min(devicePixelRatio, 1.6)); }
-    addEventListener('resize', resize);
-
-    document.getElementById('btnMenu').onclick = openMenu;
-    document.getElementById('btnShop').onclick = openShop;
-    document.getElementById('btnAdmin').onclick = openAdmin;
-    document.getElementById('closeShop').onclick = closeShop;
-    document.getElementById('closeAdmin').onclick = closeAdmin;
-
-    document.getElementById('startBtn').onclick = () => {
-      p1Data.name = (ui.name1.value || 'P1').trim().slice(0,16);
-      p2Data.name = (ui.name2.value || 'P2').trim().slice(0,16);
-      saveState.p1Name = p1Data.name; saveState.p2Name = p2Data.name; persist(); restartGame();
-    };
-    document.getElementById('resumeBtn').onclick = () => { closeMenu(); if(!world.running) restartGame(); else { world.paused = false; ui.statusText.textContent = 'Yolda'; } };
-    document.getElementById('giveCoins').onclick = () => { const ok = (p1Data.name || '').toLowerCase() === 'admin' || (p2Data.name || '').toLowerCase() === 'admin'; if(!ok) return toast('Admin değil'); addCoins(parseInt(ui.adminCoins.value || '0', 10) || 0); renderShop(); toast('Coin eklendi'); };
-    document.getElementById('unlockAll').onclick = () => { const ok = (p1Data.name || '').toLowerCase() === 'admin' || (p2Data.name || '').toLowerCase() === 'admin'; if(!ok) return toast('Admin değil'); saveState.owned = Object.keys(bikes); saveState.selectedBike = 'phantom'; persist(); applyBikeStats(); renderShop(); restartGame(); toast('Tüm motorlar açıldı'); };
-    document.getElementById('resetSave').onclick = () => { const ok = (p1Data.name || '').toLowerCase() === 'admin' || (p2Data.name || '').toLowerCase() === 'admin'; if(!ok) return toast('Admin değil'); localStorage.removeItem(STORE_KEY); saveState = load(); persist(); resetPlayers(); renderShop(); toast('Kayıtlar sıfırlandı'); };
-    ui.adminSpeed.oninput = () => { saveState.speedMultiplier = clamp(parseFloat(ui.adminSpeed.value || '1'), .5, 3); persist(); };
-
-
-    document.querySelectorAll('[data-touch]').forEach(btn => {
-      const key = btn.dataset.touch;
-      const set = (v) => { touch[key] = v; btn.classList.toggle('active', v); };
-      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); set(true); });
-      btn.addEventListener('pointerup', () => set(false));
-      btn.addEventListener('pointerleave', () => set(false));
-      btn.addEventListener('pointercancel', () => set(false));
-      btn.addEventListener('contextmenu', e => e.preventDefault());
-    });
-
-    ui.name1.value = saveState.p1Name || 'P1';
-    ui.name2.value = saveState.p2Name || 'P2';
-    ui.best.textContent = saveState.best || 0;
-    ui.wallet.textContent = saveState.coins || 0;
-    ui.wallet2.textContent = saveState.coins || 0;
-    ui.adminSpeed.value = saveState.speedMultiplier || 1;
-    renderShop(); persist();
-
-    window.addEventListener('pointerdown', () => { if(!world.running && !ui.menuPanel.classList.contains('show')) openMenu(); });
-  </script>
 </body>
 </html>
