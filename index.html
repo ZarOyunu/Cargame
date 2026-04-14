@@ -1,609 +1,814 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NovaGo Hub | Ege</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #0f1015;
-            --navbar-bg: #171821;
-            --card-bg: #222330;
-            --accent-color: #00ff88;
-            --text-main: #ffffff;
-            --text-muted: #a0a4b8;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ege</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+    :root {
+        --bg-color: #0f1015;
+        --navbar-bg: #171821;
+        --card-bg: #222330;
+        --accent-color: #00ff88;
+        --text-main: #ffffff;
+        --text-muted: #a0a4b8;
+        --panel: rgba(0,0,0,.45);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-main); }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            user-select: none; /* Mobilde yazıları seçmeyi engelle */
-        }
+    #hub-container { width: 100%; height: 100%; position: absolute; inset: 0; overflow-y: auto; background: var(--bg-color); z-index: 10; }
+    .navbar { background: var(--navbar-bg); padding: 15px 40px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a2b38; position: sticky; top:0; z-index: 100; }
+    .brand-container { display:flex; align-items:center; gap:15px; }
+    .logo { width:40px; height:40px; background: linear-gradient(45deg,#00ff88,#00b8ff); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:#000; }
+    .brand-name { font-size:24px; font-weight:800; letter-spacing:1px; }
+    .user-profile { display:flex; align-items:center; gap:10px; background: var(--card-bg); padding:5px 15px 5px 5px; border-radius:20px; border:1px solid var(--accent-color); }
+    .avatar { width:35px; height:35px; border-radius:50%; background:var(--accent-color); color:#000; display:flex; align-items:center; justify-content:center; font-weight:700; }
+    .main-container { padding:40px; max-width:1400px; margin:0 auto; }
+    .section-title { font-size:28px; margin-bottom:25px; font-weight:700; display:flex; align-items:center; gap:10px; }
+    .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:30px; }
+    .game-card { background:var(--card-bg); border-radius:15px; overflow:hidden; position:relative; cursor:pointer; border:1px solid transparent; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+    .game-card:hover { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0,255,136,.1); border-color: var(--accent-color); }
+    .game-thumbnail { width:100%; height:160px; background:#2a2b38; display:flex; align-items:center; justify-content:center; font-size:50px; position:relative; }
+    .play-btn-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); width:60px; height:60px; border-radius:50%; background:var(--accent-color); color:#000; display:flex; align-items:center; justify-content:center; font-size:24px; transition: transform .25s cubic-bezier(0.175,0.885,0.32,1.275); }
+    .game-card:hover .play-btn-overlay { transform:translate(-50%,-50%) scale(1); }
+    .game-info { padding:20px; }
+    .game-title { font-size:20px; font-weight:700; margin-bottom:8px; }
+    .game-developer { color: var(--text-muted); font-size:14px; margin-bottom:15px; }
 
-        body, html {
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            overflow: hidden; /* Oyun için kaydırmayı kapat */
-        }
+    #game-container { width:100%; height:100%; display:none; position:absolute; inset:0; z-index:20; background:#000; }
+    #loading-screen { position:absolute; inset:0; background: rgba(15,16,21,.95); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+    .spinner { width:60px; height:60px; border:6px solid #2a2b38; border-top-color:var(--accent-color); border-radius:50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    #loading-text { margin-top:20px; font-size:22px; font-weight:700; color:var(--accent-color); }
+    #server-logs { margin-top:15px; font-family: monospace; color:var(--text-muted); text-align:center; font-size:14px; max-width:420px; }
 
-        /* --- HUB ARAYÜZÜ (ROBLOX STİLİ) --- */
-        #hub-container {
-            width: 100%;
-            height: 100%;
-            overflow-y: auto;
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 10;
-            background-color: var(--bg-color);
-            transition: opacity 0.5s;
-        }
+    #game-ui { position:absolute; top:20px; left:20px; z-index:40; pointer-events:none; }
+    .player-list { background: var(--panel); padding:10px; border-radius:8px; color:#fff; font-size:14px; margin-bottom:10px; border:1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
+    .player-list span { color:var(--accent-color); font-weight:700; }
+    #map-status { position:absolute; top:20px; right:20px; z-index:40; background: var(--panel); color:#fff; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.12); font-size:14px; opacity:0; transform: translateY(-8px); transition: opacity .25s ease, transform .25s ease; pointer-events:none; }
+    #map-status.show { opacity:1; transform: translateY(0); }
+    #speech-layer { position:absolute; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
+    .npc-speech { position:absolute; transform: translate(-50%,-100%); background: rgba(20,20,20,.82); color:#fff; padding:6px 10px; border-radius:999px; font-size:13px; white-space:nowrap; border:1px solid rgba(255,255,255,.12); opacity:0; transition: opacity .2s ease, transform .2s ease; box-shadow:0 6px 20px rgba(0,0,0,.25); }
+    .npc-speech.show { opacity:1; }
+    .npc-speech::after { content:""; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; background: rgba(20,20,20,.82); border-right:1px solid rgba(255,255,255,.12); border-bottom:1px solid rgba(255,255,255,.12); transform: translateX(-50%) rotate(45deg); }
+    #btn-exit { position:absolute; top:20px; right:20px; z-index:40; padding:10px 20px; background:#ff3366; color:#fff; border:none; border-radius:8px; font-weight:700; pointer-events:auto; cursor:pointer; }
 
-        .navbar {
-            background-color: var(--navbar-bg);
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #2a2b38;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+    .mobile-controls { position:absolute; bottom:30px; width:100%; display:none; flex-direction:column; align-items:center; gap:12px; z-index:40; pointer-events:none; }
+    .controls-row { display:flex; gap:12px; justify-content:center; width:100%; }
+    .control-btn { width:72px; height:72px; background: rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; pointer-events:auto; backdrop-filter: blur(5px); transition: background-color .2s, transform .1s; }
+    .control-btn:active { background: rgba(0,255,136,.4); border-color: var(--accent-color); transform: scale(.9); }
+    .control-btn.small { width:68px; height:68px; font-size:24px; }
 
-        .brand-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(45deg, #00ff88, #00b8ff);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 20px;
-            color: #000;
-        }
-
-        .brand-name {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: var(--text-main);
-        }
-
-        .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background-color: var(--card-bg);
-            padding: 5px 15px 5px 5px;
-            border-radius: 20px;
-            cursor: pointer;
-            border: 1px solid var(--accent-color);
-        }
-
-        .avatar {
-            width: 35px;
-            height: 35px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #000;
-            font-weight: bold;
-        }
-
-        .main-container {
-            padding: 40px;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .section-title {
-            font-size: 28px;
-            margin-bottom: 25px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .games-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 30px;
-        }
-
-        .game-card {
-            background-color: var(--card-bg);
-            border-radius: 15px;
-            overflow: hidden;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            position: relative;
-            cursor: pointer;
-            border: 1px solid transparent;
-        }
-
-        .game-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 10px 20px rgba(0, 255, 136, 0.1);
-            border: 1px solid var(--accent-color);
-        }
-
-        .game-thumbnail {
-            width: 100%;
-            height: 160px;
-            background: #2a2b38;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 50px;
-            position: relative;
-        }
-
-        .play-btn-overlay {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            background-color: var(--accent-color);
-            color: #000;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 10;
-        }
-
-        .game-card:hover .play-btn-overlay {
-            transform: translate(-50%, -50%) scale(1);
-        }
-
-        .game-info {
-            padding: 20px;
-        }
-
-        .game-title {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .game-developer {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        /* --- OYUN EKRANI VE KONTROLLER --- */
-        #game-container {
-            width: 100%;
-            height: 100%;
-            display: none; /* Başlangıçta gizli */
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 20;
-            background-color: #000;
-        }
-
-        /* Sunucuya Katılma Ekranı */
-        #loading-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(15, 16, 21, 0.95);
-            z-index: 30;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .spinner {
-            width: 60px;
-            height: 60px;
-            border: 6px solid #2a2b38;
-            border-top-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        #loading-text {
-            margin-top: 20px;
-            font-size: 22px;
-            font-weight: bold;
-            color: var(--accent-color);
-        }
-
-        #server-logs {
-            margin-top: 15px;
-            font-family: monospace;
-            color: var(--text-muted);
-            text-align: center;
-            font-size: 14px;
-            max-width: 400px;
-        }
-
-        /* Mobil Butonlar */
-        .mobile-controls {
-            position: absolute;
-            bottom: 30px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 40px;
-            z-index: 40;
-            pointer-events: none; /* Konteyner tıklanmasın, butonlar tıklansın */
-        }
-
-        .control-btn {
-            width: 80px;
-            height: 80px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 30px;
-            color: white;
-            pointer-events: auto;
-            backdrop-filter: blur(5px);
-            transition: background-color 0.2s, transform 0.1s;
-        }
-
-        .control-btn:active {
-            background-color: rgba(0, 255, 136, 0.4);
-            border-color: var(--accent-color);
-            transform: scale(0.9);
-        }
-
-        #btn-exit {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background-color: #ff3366;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            z-index: 40;
-            pointer-events: auto;
-            cursor: pointer;
-        }
-
-        /* Oyun İçi Chat / Oyuncu Listesi Simülasyonu */
-        #game-ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 40;
-            pointer-events: none;
-        }
-
-        .player-list {
-            background-color: rgba(0,0,0,0.5);
-            padding: 10px;
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-            margin-bottom: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .player-list span { color: var(--accent-color); font-weight: bold; }
-
-    </style>
+    .hud-bottom { position:absolute; left:20px; bottom:20px; z-index:40; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
+    .hud-pill { background: var(--panel); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 12px; font-size:13px; backdrop-filter: blur(6px); }
+    .fart-particle { pointer-events:none; }
+</style>
 </head>
 <body>
-
-    <div id="hub-container">
-        <nav class="navbar">
-            <div class="brand-container">
-                <div class="logo">NG</div>
-                <div class="brand-name">NovaGo Hub</div>
-            </div>
-            
-            <div class="user-profile">
-                <div class="avatar">E</div>
-                <span>Ege</span>
-            </div>
-        </nav>
-
-        <main class="main-container">
-            <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
-            
-            <div class="games-grid">
-                <div class="game-card" onclick="joinServer()">
-                    <div class="game-thumbnail">
-                        🌍
-                        <div class="play-btn-overlay">▶</div>
-                    </div>
-                    <div class="game-info">
-                        <div class="game-title">Ege'nin 3D Dünyası</div>
-                        <div class="game-developer">Geliştirici: Ege</div>
-                        <div style="color: var(--accent-color); margin-top: 10px; font-weight: bold;">
-                            🟢 Sunucu Çevrimiçi - Tıkla ve Katıl
-                        </div>
-                    </div>
+<div id="hub-container">
+    <nav class="navbar">
+        <div class="brand-container">
+            <div class="logo">NG</div>
+            <div class="brand-name">NovaGo Hub</div>
+        </div>
+        <div class="user-profile">
+            <div class="avatar">E</div>
+            <span>Ege</span>
+        </div>
+    </nav>
+    <main class="main-container">
+        <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
+        <div class="games-grid">
+            <div class="game-card" onclick="joinServer()">
+                <div class="game-thumbnail">🌍<div class="play-btn-overlay">▶</div></div>
+                <div class="game-info">
+                    <div class="game-title">Ege'nin 3D Dünyası</div>
+                    <div class="game-developer">Geliştirici: Ege</div>
+                    <div style="color: var(--accent-color); margin-top:10px; font-weight:bold;">🟢 Sunucu Çevrimiçi - Tıkla ve Katıl</div>
                 </div>
             </div>
-        </main>
+        </div>
+    </main>
+</div>
+
+<div id="game-container">
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div id="loading-text">Sunucuya Bağlanılıyor...</div>
+        <div id="server-logs"><p>Uzak sunucu IP'si aranıyor...</p></div>
     </div>
 
-    <div id="game-container">
-        <div id="loading-screen">
-            <div class="spinner"></div>
-            <div id="loading-text">Sunucuya Bağlanılıyor...</div>
-            <div id="server-logs">
-                <p>Uzak sunucu IP'si aranıyor...</p>
-            </div>
+    <div id="canvas-container" style="width:100%;height:100%;"></div>
+    <div id="game-ui" style="display:none;">
+        <div class="player-list">👥 Çevrimiçi Oyuncular:<br>- <span>Ege</span> (Sen)<br>- <span>NovaOyuncu_99</span></div>
+    </div>
+    <div id="speech-layer"></div>
+    <div id="map-status">Harita yükleniyor...</div>
+    <div class="hud-bottom">
+        <div class="hud-pill">WASD / Ok tuşları: hareket • Space: zıpla • F / 💨: osur</div>
+        <div class="hud-pill">Harita yürüdükçe yüklenir ve uzaktakiler silinir</div>
+    </div>
+    <button id="btn-exit" style="display:none;" onclick="exitGame()">Oyundan Çık</button>
+
+    <div class="mobile-controls" id="mobile-controls">
+        <div class="controls-row">
+            <div class="control-btn small" id="btn-left">⬅️</div>
+            <div class="control-btn small" id="btn-forward">⬆️</div>
+            <div class="control-btn small" id="btn-right">➡️</div>
         </div>
-
-        <div id="canvas-container" style="width: 100%; height: 100%;"></div>
-
-        <div id="game-ui" style="display: none;">
-            <div class="player-list">
-                👥 Çevrimiçi Oyuncular:<br>
-                - <span>Ege</span> (Sen)<br>
-                - <span>NovaOyuncu_99</span>
-            </div>
-        </div>
-
-        <button id="btn-exit" style="display: none;" onclick="exitGame()">Oyundan Çık</button>
-
-        <div class="mobile-controls" id="mobile-controls" style="display: none;">
-            <div class="control-btn" id="btn-forward">⬆️</div>
-            <div class="control-btn" id="btn-jump">⏫</div>
+        <div class="controls-row">
+            <div class="control-btn small" id="btn-back">⬇️</div>
+            <div class="control-btn small" id="btn-fart">💨</div>
+            <div class="control-btn small" id="btn-jump">⏫</div>
         </div>
     </div>
+</div>
 
-    <script>
-        // DOM Elementleri
-        const hubContainer = document.getElementById("hub-container");
-        const gameContainer = document.getElementById("game-container");
-        const loadingScreen = document.getElementById("loading-screen");
-        const loadingText = document.getElementById("loading-text");
-        const serverLogs = document.getElementById("server-logs");
-        const mobileControls = document.getElementById("mobile-controls");
-        const btnExit = document.getElementById("btn-exit");
-        const gameUI = document.getElementById("game-ui");
+<script>
+const hubContainer = document.getElementById('hub-container');
+const gameContainer = document.getElementById('game-container');
+const loadingScreen = document.getElementById('loading-screen');
+const loadingText = document.getElementById('loading-text');
+const serverLogs = document.getElementById('server-logs');
+const mobileControls = document.getElementById('mobile-controls');
+const btnExit = document.getElementById('btn-exit');
+const gameUI = document.getElementById('game-ui');
+const mapStatus = document.getElementById('map-status');
+const speechLayer = document.getElementById('speech-layer');
 
-        // Kontrol Değişkenleri
-        let moveForward = false;
-        let doJump = false;
-        let gameActive = false;
+const btnFwd = document.getElementById('btn-forward');
+const btnBack = document.getElementById('btn-back');
+const btnLeft = document.getElementById('btn-left');
+const btnRight = document.getElementById('btn-right');
+const btnFart = document.getElementById('btn-fart');
+const btnJmp = document.getElementById('btn-jump');
 
-        // Three.js Değişkenleri
-        let scene, camera, renderer;
-        let player, ground;
-        
-        // Fizik Değişkenleri
-        let velocityY = 0;
-        let gravity = -0.015; // Düşme (Yerçekimi) gücü
-        let jumpPower = 0.35; // Zıplama gücü
-        let isGrounded = false;
-        let moveSpeed = 0.15;
+let moveForward = false, moveBack = false, moveLeft = false, moveRight = false;
+let gameActive = false;
+let scene, camera, renderer;
+let player, playerBody, playerHead, playerArms = [], playerLegs = [];
+let velocityY = 0, gravity = -0.015, jumpPower = 0.36, isGrounded = false;
+let moveSpeed = 0.12, runMultiplier = 1.6, isRunning = false;
+let cameraDistance = 8, cameraHeight = 4;
+let animationId;
 
-        let animationId;
+let chunks = new Map();
+let chunkEntities = new Map();
+let npcs = [];
+let fartParticles = [];
+let destructibles = [];
+let lastFartAt = 0;
+let worldTime = 0;
+let lastPlayerYaw = 0;
+let sunLight, hemiLight;
 
-        // --- SUNUCUYA KATILMA SİMÜLASYONU ---
-        function joinServer() {
-            hubContainer.style.display = "none";
-            gameContainer.style.display = "block";
-            loadingScreen.style.display = "flex";
-            
-            // Log simülasyonu
-            setTimeout(() => { addLog("Kimlik doğrulanıyor (Ege)..."); }, 800);
-            setTimeout(() => { addLog("Dünya verileri indiriliyor..."); }, 1600);
-            setTimeout(() => { addLog("Fizik motoru başlatılıyor..."); }, 2400);
-            setTimeout(() => { 
-                loadingText.innerText = "Sunucuya Katılındı!";
-                loadingText.style.color = "#ffffff";
-            }, 3000);
-            
-            setTimeout(() => {
-                loadingScreen.style.display = "none";
-                mobileControls.style.display = "flex";
-                btnExit.style.display = "block";
-                gameUI.style.display = "block";
-                startGameEngine();
-            }, 3500);
+const CHUNK_SIZE = 24;
+const CHUNK_RADIUS = 2;
+const WORLD_SEED = 1337;
+
+function seedFromCoords(x, z, extra = 0) {
+    const s = Math.sin(x * 9283.17 + z * 1931.11 + WORLD_SEED + extra * 53.1) * 10000;
+    return s - Math.floor(s);
+}
+function randBetween(x, z, min, max, offset = 0) { return min + seedFromCoords(x + offset, z - offset, offset) * (max - min); }
+function showMapStatus(text) {
+    mapStatus.textContent = text;
+    mapStatus.classList.add('show');
+    clearTimeout(showMapStatus._timer);
+    showMapStatus._timer = setTimeout(() => mapStatus.classList.remove('show'), 1100);
+}
+function addLog(text) { const p = document.createElement('p'); p.innerText = text; serverLogs.appendChild(p); }
+function joinServer() {
+    hubContainer.style.display = 'none';
+    gameContainer.style.display = 'block';
+    loadingScreen.style.display = 'flex';
+    serverLogs.innerHTML = '<p>Uzak sunucu IP\'si aranıyor...</p>';
+    setTimeout(() => addLog('Kimlik doğrulanıyor (Ege)...'), 800);
+    setTimeout(() => addLog('Dünya verileri indiriliyor...'), 1600);
+    setTimeout(() => addLog('Çevre detayları hazırlanıyor...'), 2300);
+    setTimeout(() => addLog('Fizik motoru başlatılıyor...'), 3000);
+    setTimeout(() => { loadingText.innerText = 'Sunucuya Katılındı!'; loadingText.style.color = '#ffffff'; }, 3400);
+    setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        mobileControls.style.display = 'flex';
+        btnExit.style.display = 'block';
+        gameUI.style.display = 'block';
+        if (speechLayer) speechLayer.innerHTML = '';
+        startGameEngine();
+    }, 3900);
+}
+
+function exitGame() {
+    gameActive = false;
+    cancelAnimationFrame(animationId);
+    if (renderer && renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
+    if (scene) {
+        chunks.forEach(data => scene.remove(data.group));
+        npcs.forEach(npc => npc.label && npc.label.remove());
+        fartParticles.forEach(p => scene.remove(p.mesh));
+    }
+    chunks.clear();
+    chunkEntities.clear();
+    npcs = [];
+    fartParticles = [];
+    destructibles = [];
+    gameContainer.style.display = 'none';
+    mobileControls.style.display = 'none';
+    btnExit.style.display = 'none';
+    gameUI.style.display = 'none';
+    hubContainer.style.display = 'block';
+    serverLogs.innerHTML = '<p>Uzak sunucu IP\'si aranıyor...</p>';
+    loadingText.innerText = 'Sunucuya Bağlanılıyor...';
+    loadingText.style.color = 'var(--accent-color)';
+    if (speechLayer) speechLayer.innerHTML = '';
+    if (mapStatus) mapStatus.classList.remove('show');
+}
+
+function createNpcLabel() {
+    const label = document.createElement('div');
+    label.className = 'npc-speech';
+    label.textContent = 'ıyy pis koktu';
+    speechLayer.appendChild(label);
+    return label;
+}
+
+function removeFromParent(object3D) {
+    if (object3D && object3D.parent) object3D.parent.remove(object3D);
+}
+
+function registerDestructible(object3D, type, key) {
+    object3D.userData.destructibleType = type;
+    object3D.userData.chunkKey = key;
+    destructibles.push({ object3D, type, key, destroyed: false });
+}
+
+function makeTree() {
+    const group = new THREE.Group();
+    const trunkHeight = 1.6 + Math.random() * 0.7;
+    const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.23, trunkHeight, 7),
+        new THREE.MeshStandardMaterial({ color: 0x7a4e2e })
+    );
+    trunk.position.y = trunkHeight / 2;
+    trunk.castShadow = true;
+    group.add(trunk);
+
+    const crown = new THREE.Mesh(
+        new THREE.SphereGeometry(0.95 + Math.random() * 0.35, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x2f9b3a })
+    );
+    crown.position.y = trunkHeight + 0.7;
+    crown.castShadow = true;
+    group.add(crown);
+
+    return group;
+}
+
+function makeHouse() {
+    const group = new THREE.Group();
+    const w = 3.5 + Math.random() * 1.5;
+    const d = 3.5 + Math.random() * 1.5;
+    const h = 2.2 + Math.random() * 0.8;
+
+    const base = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color: 0xb8a38b })
+    );
+    base.position.y = h / 2;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    group.add(base);
+
+    const roof = new THREE.Mesh(
+        new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.8, 4),
+        new THREE.MeshStandardMaterial({ color: 0x8b3f2f })
+    );
+    roof.position.y = h + 0.9;
+    roof.rotation.y = Math.PI / 4;
+    roof.castShadow = true;
+    group.add(roof);
+
+    const door = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 1.2, 0.08),
+        new THREE.MeshStandardMaterial({ color: 0x5b3c2f })
+    );
+    door.position.set(0, 0.6, d / 2 + 0.05);
+    group.add(door);
+
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0xaee8ff, emissive: 0x225566, emissiveIntensity: 0.35 });
+    [-1, 1].forEach((side) => {
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.08), windowMat);
+        win.position.set(side * (w * 0.25), 1.35, d / 2 + 0.05);
+        group.add(win);
+    });
+
+    const chimney = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.9, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0x6a4a3a })
+    );
+    chimney.position.set(w * 0.28, h + 1.2, -d * 0.12);
+    group.add(chimney);
+
+    return group;
+}
+
+function makeNpc() {
+    const group = new THREE.Group();
+    const bodyColor = Math.random() > 0.5 ? 0x4dd0e1 : 0xff8f6b;
+    const skin = 0xf1c7a1;
+    const pantsColor = 0x2f3d59;
+
+    const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 1.1, 0.55),
+        new THREE.MeshStandardMaterial({ color: bodyColor })
+    );
+    body.position.y = 1.45;
+    body.castShadow = true;
+    group.add(body);
+
+    const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.38, 12, 10),
+        new THREE.MeshStandardMaterial({ color: skin })
+    );
+    head.position.y = 2.2;
+    head.castShadow = true;
+    group.add(head);
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    eye1.position.set(-0.12, 2.23, 0.32);
+    eye2.position.set(0.12, 2.23, 0.32);
+    group.add(eye1, eye2);
+
+    const armGeo = new THREE.BoxGeometry(0.14, 0.72, 0.14);
+    const armMat = new THREE.MeshStandardMaterial({ color: skin });
+    const armL = new THREE.Mesh(armGeo, armMat);
+    const armR = new THREE.Mesh(armGeo, armMat);
+    armL.position.set(-0.55, 1.5, 0);
+    armR.position.set(0.55, 1.5, 0);
+    armL.rotation.z = 0.15;
+    armR.rotation.z = -0.15;
+    group.add(armL, armR);
+
+    const legGeo = new THREE.BoxGeometry(0.18, 0.8, 0.18);
+    const legMat = new THREE.MeshStandardMaterial({ color: pantsColor });
+    const legL = new THREE.Mesh(legGeo, legMat);
+    const legR = new THREE.Mesh(legGeo, legMat);
+    legL.position.set(-0.2, 0.4, 0);
+    legR.position.set(0.2, 0.4, 0);
+    group.add(legL, legR);
+
+    return group;
+}
+
+function spawnChunk(cx, cz) {
+    const key = `${cx},${cz}`;
+    if (chunks.has(key)) return;
+
+    const group = new THREE.Group();
+    group.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
+    const entities = [];
+
+    const groundColor = 0x3a9b39 + Math.floor(seedFromCoords(cx, cz) * 0x0f0f0f);
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE),
+        new THREE.MeshStandardMaterial({ color: groundColor })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    ground.position.set(CHUNK_SIZE / 2, 0, CHUNK_SIZE / 2);
+    group.add(ground);
+
+    // çim ve taş detayları
+    const bladeCount = 12 + Math.floor(seedFromCoords(cx + 3, cz + 9) * 10);
+    for (let i = 0; i < bladeCount; i++) {
+        const height = 0.18 + seedFromCoords(cx + i, cz - i) * 0.35;
+        const blade = new THREE.Mesh(
+            new THREE.BoxGeometry(0.03, height, 0.03),
+            new THREE.MeshStandardMaterial({ color: 0x2d7c30 })
+        );
+        blade.position.set(
+            1 + seedFromCoords(cx + i * 2, cz + i * 5) * (CHUNK_SIZE - 2),
+            height / 2,
+            1 + seedFromCoords(cx - i * 4, cz + i * 7) * (CHUNK_SIZE - 2)
+        );
+        blade.rotation.z = (seedFromCoords(cx + i * 7, cz + i * 11) - 0.5) * 0.6;
+        group.add(blade);
+        entities.push(blade);
+    }
+
+    const rockCount = seedFromCoords(cx + 8, cz + 1) > 0.35 ? 1 : 0;
+    for (let i = 0; i < rockCount; i++) {
+        const rock = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(0.55 + seedFromCoords(cx + 18, cz + 12) * 0.4, 0),
+            new THREE.MeshStandardMaterial({ color: 0x7d7d7d })
+        );
+        rock.position.set(
+            4 + seedFromCoords(cx + 19 + i, cz + 13) * (CHUNK_SIZE - 8),
+            0.4,
+            4 + seedFromCoords(cx + 21 + i, cz + 15) * (CHUNK_SIZE - 8)
+        );
+        rock.castShadow = true;
+        rock.receiveShadow = true;
+        group.add(rock);
+        entities.push(rock);
+    }
+
+    const treeCount = 2 + Math.floor(seedFromCoords(cx + 5, cz + 5) * 4);
+    for (let i = 0; i < treeCount; i++) {
+        const tree = makeTree();
+        tree.position.set(
+            2 + seedFromCoords(cx + i * 4, cz + i * 8) * (CHUNK_SIZE - 4),
+            0,
+            2 + seedFromCoords(cx - i * 6, cz + i * 10) * (CHUNK_SIZE - 4)
+        );
+        tree.rotation.y = seedFromCoords(cx + i * 2, cz - i * 2) * Math.PI * 2;
+        group.add(tree);
+        entities.push(tree);
+        registerDestructible(tree, 'tree', key);
+    }
+
+    const houseChance = seedFromCoords(cx * 7, cz * 7);
+    if (houseChance > 0.45) {
+        const house = makeHouse();
+        house.position.set(
+            CHUNK_SIZE * 0.5 + (seedFromCoords(cx + 77, cz + 2) - 0.5) * 8,
+            0,
+            CHUNK_SIZE * 0.5 + (seedFromCoords(cx + 33, cz + 4) - 0.5) * 8
+        );
+        house.rotation.y = Math.floor(seedFromCoords(cx + 90, cz + 90) * 4) * (Math.PI / 2);
+        group.add(house);
+        entities.push(house);
+        registerDestructible(house, 'house', key);
+    }
+
+    const flowerCount = 3 + Math.floor(seedFromCoords(cx + 71, cz + 19) * 6);
+    for (let i = 0; i < flowerCount; i++) {
+        const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.03, 0.04, 0.28 + Math.random() * 0.18, 6),
+            new THREE.MeshStandardMaterial({ color: 0x2f8f2f })
+        );
+        stem.position.set(
+            1 + seedFromCoords(cx + i * 9, cz + i * 3) * (CHUNK_SIZE - 2),
+            0.14,
+            1 + seedFromCoords(cx - i * 6, cz + i * 5) * (CHUNK_SIZE - 2)
+        );
+        group.add(stem);
+
+        const bloom = new THREE.Mesh(
+            new THREE.SphereGeometry(0.08 + seedFromCoords(cx + i * 2, cz - i * 4) * 0.08, 6, 6),
+            new THREE.MeshStandardMaterial({ color: [0xff5ca8, 0xffdd57, 0x67e8f9, 0xffffff][i % 4] })
+        );
+        bloom.position.set(stem.position.x, stem.position.y + 0.22, stem.position.z);
+        group.add(bloom);
+    }
+
+    const npcCount = seedFromCoords(cx * 3, cz * 9) > 0.35 ? 1 + (seedFromCoords(cx + 13, cz + 9) > 0.8 ? 1 : 0) : 0;
+    for (let i = 0; i < npcCount; i++) {
+        const npcMesh = makeNpc();
+        const x = 4 + seedFromCoords(cx + 99 + i, cz + 33) * (CHUNK_SIZE - 8);
+        const z = 4 + seedFromCoords(cx + 55 + i, cz + 77) * (CHUNK_SIZE - 8);
+        npcMesh.position.set(x, 0, z);
+        npcMesh.castShadow = true;
+        npcMesh.userData.isNPC = true;
+        npcMesh.userData.homeChunk = key;
+        group.add(npcMesh);
+
+        const label = createNpcLabel();
+        npcs.push({ mesh: npcMesh, label, speechUntil: 0, chunkKey: key, vx: 0, vz: 0, targetX: x, targetZ: z, nextThink: 0 });
+    }
+
+    chunks.set(key, { group, cx, cz });
+    chunkEntities.set(key, entities);
+    scene.add(group);
+}
+
+function unloadChunk(key) {
+    const chunk = chunks.get(key);
+    if (!chunk) return;
+    scene.remove(chunk.group);
+    chunks.delete(key);
+    chunkEntities.delete(key);
+    npcs = npcs.filter(npc => {
+        if (npc.chunkKey === key) { npc.label.remove(); return false; }
+        return true;
+    });
+}
+
+function updateChunks() {
+    const currentCX = Math.floor(player.position.x / CHUNK_SIZE);
+    const currentCZ = Math.floor(player.position.z / CHUNK_SIZE);
+    const needed = new Set();
+    for (let x = currentCX - CHUNK_RADIUS; x <= currentCX + CHUNK_RADIUS; x++) {
+        for (let z = currentCZ - CHUNK_RADIUS; z <= currentCZ + CHUNK_RADIUS; z++) {
+            const key = `${x},${z}`;
+            needed.add(key);
+            if (!chunks.has(key)) { spawnChunk(x, z); showMapStatus('Harita yükleniyor...'); }
         }
+    }
+    for (const key of Array.from(chunks.keys())) {
+        if (!needed.has(key)) { unloadChunk(key); showMapStatus('Harita temizleniyor...'); }
+    }
+}
 
-        function addLog(text) {
-            const p = document.createElement("p");
-            p.innerText = text;
-            serverLogs.appendChild(p);
+function fart() {
+    const now = performance.now();
+    if (now - lastFartAt < 1300) return;
+    lastFartAt = now;
+    showMapStatus('💨 Osurma yayıldı!');
+    for (let i = 0; i < 14; i++) {
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.14 + Math.random() * 0.07, 8, 8),
+            new THREE.MeshStandardMaterial({ color: 0xd6d6d6, transparent: true, opacity: 0.75 })
+        );
+        mesh.position.set(player.position.x + (Math.random() - 0.5) * 0.8, player.position.y + 0.8 + Math.random() * 0.4, player.position.z + (Math.random() - 0.5) * 0.8);
+        scene.add(mesh);
+        fartParticles.push({ mesh, vx:(Math.random()-0.5)*0.08, vy:0.02+Math.random()*0.06, vz:(Math.random()-0.5)*0.08, life:60 + Math.floor(Math.random()*30) });
+    }
+    npcs.forEach(npc => {
+        const npcPos = new THREE.Vector3();
+        npc.mesh.getWorldPosition(npcPos);
+        if (npcPos.distanceTo(player.position) < 10) npc.speechUntil = now + 2000;
+    });
+    destroyNearbyObjects(9.5);
+}
+
+function buildPlayer() {
+    player = new THREE.Group();
+    const skin = 0xf1c7a1;
+    const shirt = 0xff3366;
+    const pants = 0x21324e;
+
+    playerBody = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 0.6), new THREE.MeshStandardMaterial({ color: shirt }));
+    playerBody.position.y = 1.35;
+    playerBody.castShadow = true;
+
+    playerHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshStandardMaterial({ color: skin }));
+    playerHead.position.y = 2.18;
+    playerHead.castShadow = true;
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    eye1.position.set(-0.13, 2.2, 0.34);
+    eye2.position.set(0.13, 2.2, 0.34);
+
+    const armGeo = new THREE.BoxGeometry(0.14, 0.78, 0.14);
+    const armMat = new THREE.MeshStandardMaterial({ color: skin });
+    const armL = new THREE.Mesh(armGeo, armMat);
+    const armR = new THREE.Mesh(armGeo, armMat);
+    armL.position.set(-0.58, 1.5, 0);
+    armR.position.set(0.58, 1.5, 0);
+    armL.rotation.z = 0.12;
+    armR.rotation.z = -0.12;
+    playerArms = [armL, armR];
+
+    const legGeo = new THREE.BoxGeometry(0.18, 0.92, 0.18);
+    const legMat = new THREE.MeshStandardMaterial({ color: pants });
+    const legL = new THREE.Mesh(legGeo, legMat);
+    const legR = new THREE.Mesh(legGeo, legMat);
+    legL.position.set(-0.22, 0.42, 0);
+    legR.position.set(0.22, 0.42, 0);
+    playerLegs = [legL, legR];
+
+    player.add(playerBody, playerHead, eye1, eye2, armL, armR, legL, legR);
+    player.position.set(0, 1, 0);
+    scene.add(player);
+}
+
+function startGameEngine() {
+    gameActive = true;
+    const container = document.getElementById('canvas-container');
+    container.innerHTML = '';
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 18, 90);
+
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 4, 8);
+
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    hemiLight = new THREE.HemisphereLight(0xffffff, 0x446644, 0.9);
+    scene.add(hemiLight);
+    sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(10, 20, 10);
+    sunLight.castShadow = true;
+    scene.add(sunLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    scene.add(ambientLight);
+
+    buildPlayer();
+    updateChunks();
+    if (!startGameEngine._resizeBound) { window.addEventListener('resize', onWindowResize, false); startGameEngine._resizeBound = true; }
+    animate();
+}
+
+function setMoveState(key, state) {
+    if (key === 'forward') moveForward = state;
+    if (key === 'back') moveBack = state;
+    if (key === 'left') moveLeft = state;
+    if (key === 'right') moveRight = state;
+}
+function wireHoldButton(button, key) {
+    if (!button) return;
+    button.addEventListener('pointerdown', e => { e.preventDefault(); setMoveState(key, true); });
+    button.addEventListener('pointerup', () => setMoveState(key, false));
+    button.addEventListener('pointerleave', () => setMoveState(key, false));
+    button.addEventListener('pointercancel', () => setMoveState(key, false));
+}
+wireHoldButton(btnFwd, 'forward');
+wireHoldButton(btnBack, 'back');
+wireHoldButton(btnLeft, 'left');
+wireHoldButton(btnRight, 'right');
+if (btnFart) btnFart.addEventListener('pointerdown', e => { e.preventDefault(); fart(); });
+if (btnJmp) btnJmp.addEventListener('pointerdown', e => { e.preventDefault(); if (isGrounded) { velocityY = jumpPower; isGrounded = false; } });
+
+document.addEventListener('keydown', e => {
+    if (['KeyW','ArrowUp'].includes(e.code)) moveForward = true;
+    if (['KeyS','ArrowDown'].includes(e.code)) moveBack = true;
+    if (['KeyA','ArrowLeft'].includes(e.code)) moveLeft = true;
+    if (['KeyD','ArrowRight'].includes(e.code)) moveRight = true;
+    if (['ShiftLeft','ShiftRight'].includes(e.code)) isRunning = true;
+    if (e.code === 'Space' && isGrounded) { velocityY = jumpPower; isGrounded = false; }
+    if (e.code === 'KeyF') fart();
+});
+document.addEventListener('keyup', e => {
+    if (['KeyW','ArrowUp'].includes(e.code)) moveForward = false;
+    if (['KeyS','ArrowDown'].includes(e.code)) moveBack = false;
+    if (['KeyA','ArrowLeft'].includes(e.code)) moveLeft = false;
+    if (['KeyD','ArrowRight'].includes(e.code)) moveRight = false;
+    if (['ShiftLeft','ShiftRight'].includes(e.code)) isRunning = false;
+});
+
+function onWindowResize() {
+    if (!camera || !renderer) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function updateMovement() {
+    const dir = new THREE.Vector3();
+    if (moveForward) dir.z -= 1;
+    if (moveBack) dir.z += 1;
+    if (moveRight) dir.x += 1;
+    if (moveLeft) dir.x -= 1;
+
+    if (dir.lengthSq() > 0) {
+        dir.normalize();
+        const speed = moveSpeed * (isRunning ? runMultiplier : 1);
+        player.position.addScaledVector(dir, speed);
+        player.rotation.y = Math.atan2(dir.x, -dir.z);
+        if (isGrounded) {
+            const bob = Math.sin(performance.now() * 0.02) * 0.06;
+            player.position.y = 1 + bob;
         }
+    }
+}
 
-        function exitGame() {
-            gameActive = false;
-            cancelAnimationFrame(animationId);
-            document.getElementById("canvas-container").innerHTML = ""; // Canvas'ı temizle
-            
-            gameContainer.style.display = "none";
-            mobileControls.style.display = "none";
-            btnExit.style.display = "none";
-            gameUI.style.display = "none";
-            hubContainer.style.display = "block";
-            
-            // Logları sıfırla
-            serverLogs.innerHTML = "<p>Uzak sunucu IP'si aranıyor...</p>";
-            loadingText.innerText = "Sunucuya Bağlanılıyor...";
-            loadingText.style.color = "var(--accent-color)";
-        }
-
-        // --- THREE.JS 3D OYUN MOTORU VE FİZİK ---
-        function startGameEngine() {
-            gameActive = true;
-            const container = document.getElementById("canvas-container");
-
-            // 1. Sahne (Scene)
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB); // Gökyüzü mavisi
-            scene.fog = new THREE.Fog(0x87CEEB, 10, 50); // Uzaklık sisi
-
-            // 2. Kamera
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 3, 8); // Oyuncunun arkasında
-
-            // 3. Render Motoru
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
-
-            // 4. Işıklandırma
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(10, 20, 10);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
-
-            // 5. Zemin (Ground)
-            const groundGeo = new THREE.PlaneGeometry(100, 100);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Çimen yeşili
-            ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2; // Yere yatır
-            ground.receiveShadow = true;
-            scene.add(ground);
-
-            // Zemin Izgarası (Grid)
-            const gridHelper = new THREE.GridHelper(100, 100, 0x000000, 0x000000);
-            gridHelper.material.opacity = 0.2;
-            gridHelper.material.transparent = true;
-            scene.add(gridHelper);
-
-            // 6. Oyuncu (Karakter - Ege)
-            const playerGeo = new THREE.BoxGeometry(1, 2, 1); // İnsan boyutuna yakın bir kutu
-            const playerMat = new THREE.MeshStandardMaterial({ color: 0xff3366 });
-            player = new THREE.Mesh(playerGeo, playerMat);
-            player.position.y = 10; // Havadan doğsun (Düşme animasyonu için yüksekten bırakıyoruz)
-            player.castShadow = true;
-            scene.add(player);
-
-            // Rastgele Engeller/Platformlar (Dünya dolu gözüksün)
-            for(let i=0; i<20; i++) {
-                const boxSize = Math.random() * 2 + 1;
-                const bGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
-                const bMat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
-                const bMesh = new THREE.Mesh(bGeo, bMat);
-                bMesh.position.x = (Math.random() - 0.5) * 40;
-                bMesh.position.z = (Math.random() - 0.5) * 40 - 10;
-                bMesh.position.y = boxSize / 2;
-                bMesh.castShadow = true;
-                bMesh.receiveShadow = true;
-                scene.add(bMesh);
+function updateNpcAI(dt) {
+    const now = performance.now();
+    npcs.forEach(npc => {
+        const p = npc.mesh.position;
+        if (now > npc.nextThink || Math.abs(p.x - npc.targetX) < 0.2 && Math.abs(p.z - npc.targetZ) < 0.2) {
+            const home = chunks.get(npc.chunkKey);
+            if (home) {
+                const baseX = home.cx * CHUNK_SIZE + CHUNK_SIZE * 0.5;
+                const baseZ = home.cz * CHUNK_SIZE + CHUNK_SIZE * 0.5;
+                npc.targetX = baseX + (seedFromCoords(home.cx, home.cz, now * 0.001 + Math.random()) - 0.5) * (CHUNK_SIZE * 0.65);
+                npc.targetZ = baseZ + (seedFromCoords(home.cx + 5, home.cz + 5, now * 0.001 + Math.random()) - 0.5) * (CHUNK_SIZE * 0.65);
+                npc.nextThink = now + 2000 + seedFromCoords(home.cx, home.cz, 9) * 2500;
             }
-
-            // Yeniden boyutlandırma dinleyicisi
-            window.addEventListener('resize', onWindowResize, false);
-
-            animate();
         }
+        const dx = npc.targetX - p.x;
+        const dz = npc.targetZ - p.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.05) {
+            const speed = 0.02 + seedFromCoords(p.x, p.z, 4) * 0.03;
+            p.x += (dx / dist) * speed * dt;
+            p.z += (dz / dist) * speed * dt;
+            npc.mesh.rotation.y = Math.atan2(dx, -dz);
+        }
+    });
+}
 
-        // --- MOBİL BUTON KONTROLLERİ ---
-        const btnFwd = document.getElementById("btn-forward");
-        const btnJmp = document.getElementById("btn-jump");
+function updateNpcLabels() {
+    const width = window.innerWidth, height = window.innerHeight;
+    const now = performance.now();
+    npcs.forEach(npc => {
+        const worldPos = new THREE.Vector3();
+        npc.mesh.getWorldPosition(worldPos);
+        const screenPos = worldPos.clone().add(new THREE.Vector3(0, 2.5, 0)).project(camera);
+        const visible = screenPos.z < 1;
+        npc.label.style.left = `${(screenPos.x * 0.5 + 0.5) * width}px`;
+        npc.label.style.top = `${(-screenPos.y * 0.5 + 0.5) * height}px`;
+        const active = npc.speechUntil > now && visible;
+        npc.label.classList.toggle('show', active);
+        npc.label.style.display = visible ? 'block' : 'none';
+        if (active) npc.label.textContent = 'ıyy pis koktu';
+    });
+}
 
-        // İleri Butonu (Basılı tutuldukça gider)
-        btnFwd.addEventListener("pointerdown", () => moveForward = true);
-        btnFwd.addEventListener("pointerup", () => moveForward = false);
-        btnFwd.addEventListener("pointerleave", () => moveForward = false);
+function updateFartParticles() {
+    fartParticles = fartParticles.filter(p => {
+        p.life -= 1;
+        p.mesh.position.x += p.vx;
+        p.mesh.position.y += p.vy;
+        p.mesh.position.z += p.vz;
+        p.mesh.material.opacity = Math.max(0, p.life / 90);
+        if (p.life <= 0) { scene.remove(p.mesh); return false; }
+        return true;
+    });
+}
 
-        // Zıplama Butonu (Basınca zıplar)
-        btnJmp.addEventListener("pointerdown", () => {
-            if (isGrounded) {
-                velocityY = jumpPower; // Zıplama gücünü uygula
-                isGrounded = false;
-            }
+function spawnDebris(position, count = 10) {
+    for (let i = 0; i < count; i++) {
+        const debris = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08 + Math.random() * 0.14, 0.08 + Math.random() * 0.14, 0.08 + Math.random() * 0.14),
+            new THREE.MeshStandardMaterial({ color: 0x9e7a52, transparent: true, opacity: 0.95 })
+        );
+        debris.position.copy(position).add(new THREE.Vector3((Math.random() - 0.5) * 1.6, 0.5 + Math.random() * 1.5, (Math.random() - 0.5) * 1.6));
+        scene.add(debris);
+        fartParticles.push({
+            mesh: debris,
+            vx: (Math.random() - 0.5) * 0.18,
+            vy: 0.04 + Math.random() * 0.08,
+            vz: (Math.random() - 0.5) * 0.18,
+            life: 40 + Math.floor(Math.random() * 25)
         });
+    }
+}
 
-        // Klavye desteği (PC için)
-        document.addEventListener('keydown', (e) => {
-            if(e.code === 'KeyW' || e.code === 'ArrowUp') moveForward = true;
-            if(e.code === 'Space' && isGrounded) { velocityY = jumpPower; isGrounded = false; }
-        });
-        document.addEventListener('keyup', (e) => {
-            if(e.code === 'KeyW' || e.code === 'ArrowUp') moveForward = false;
-        });
+function destroyNearbyObjects(radius = 9) {
+    const p = player.position.clone();
+    let destroyedCount = 0;
 
-        // Pencere Boyutu Değişimi
-        function onWindowResize() {
-            if(!camera || !renderer) return;
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+    destructibles.forEach(item => {
+        if (item.destroyed) return;
+        const pos = new THREE.Vector3();
+        item.object3D.getWorldPosition(pos);
+        if (pos.distanceTo(p) <= radius) {
+            item.destroyed = true;
+            destroyedCount++;
+            spawnDebris(pos, item.type === 'house' ? 20 : 12);
+            removeFromParent(item.object3D);
         }
+    });
 
-        // --- ANA OYUN DÖNGÜSÜ (FİZİK VE RENDER) ---
-        function animate() {
-            if (!gameActive) return;
-            animationId = requestAnimationFrame(animate);
+    if (destroyedCount > 0) {
+        showMapStatus(`💥 ${destroyedCount} şey yıkıldı!`);
+    } else {
+        showMapStatus('💨 Osurma yayıldı!');
+    }
+}
 
-            // 1. Yerçekimi ve Düşme Fiziği
-            velocityY += gravity; // Her karede aşağı doğru çekim uygula
-            player.position.y += velocityY;
+function animate() {
+    if (!gameActive) return;
+    animationId = requestAnimationFrame(animate);
+    worldTime += 0.016;
 
-            // Zemin Çarpışma Kontrolü (Karakterin boyu 2 birim, merkezi 1. birimde)
-            if (player.position.y <= 1) {
-                player.position.y = 1; // Yerin altına düşmesini engelle
-                velocityY = 0; // Düşme hızını sıfırla
-                isGrounded = true; // Yerde olduğunu onayla
-            } else {
-                isGrounded = false; // Havadayken
-            }
+    // player physics
+    velocityY += gravity;
+    player.position.y += velocityY;
+    if (player.position.y <= 1) { player.position.y = 1; velocityY = 0; isGrounded = true; } else { isGrounded = false; }
 
-            // 2. İleri Hareket
-            if (moveForward) {
-                player.translateZ(-moveSpeed); // Kendi ekseninde ileri (Z ekseni eksi yönü)
-                // Yürürken küçük bir sallanma efekti (Bobbing)
-                if (isGrounded) {
-                    player.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
-                }
-            } else {
-                player.rotation.z = 0; // Durunca dik dur
-            }
+    updateMovement();
+    updateNpcAI(1);
+    updateChunks();
+    updateFartParticles();
+    updateNpcLabels();
 
-            // Düşerken Hafif Takla Atma Efekti (Zevk için)
-            if (!isGrounded && velocityY < 0) {
-                player.rotation.x -= 0.02; // Düşerken öne eğilme
-            } else {
-                player.rotation.x = 0; // Yere basınca düzel
-            }
+    // camera follow
+    const yaw = player.rotation.y;
+    const cameraOffset = new THREE.Vector3(0, cameraHeight, cameraDistance).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
+    const desired = player.position.clone().add(cameraOffset);
+    camera.position.lerp(desired, 0.1);
+    camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
 
-            // 3. Kamera Takibi
-            // Kamerayı oyuncunun arkasında ve biraz yukarısında tut
-            const relativeCameraOffset = new THREE.Vector3(0, 4, 8);
-            const cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
-            
-            // Kamera yumuşak bir şekilde oyuncuyu takip etsin (Lerp)
-            camera.position.lerp(cameraOffset, 0.1);
-            camera.lookAt(player.position);
+    // player walk animation
+    const walk = (moveForward || moveBack || moveLeft || moveRight) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
+    playerLegs[0].rotation.x = walk * 0.7;
+    playerLegs[1].rotation.x = -walk * 0.7;
+    playerArms[0].rotation.x = -walk * 0.55;
+    playerArms[1].rotation.x = walk * 0.55;
+    playerBody.rotation.z = Math.sin(performance.now() * 0.003) * 0.03;
 
-            // Sahneyi Çiz
-            renderer.render(scene, camera);
-        }
-    </script>
+    // gentle sunlight shift
+    const lightWave = 0.1 * Math.sin(worldTime * 0.2);
+    if (sunLight) sunLight.intensity = 0.95 + lightWave;
+    if (hemiLight) hemiLight.intensity = 0.85 + lightWave * 0.5;
+
+    renderer.render(scene, camera);
+}
+</script>
 </body>
 </html>
