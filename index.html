@@ -131,6 +131,63 @@
         pointer-events:none;
         transition: transform .05s linear;
     }
+
+    .join-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 12px;
+        align-items: end;
+        margin: 18px 0 28px;
+        padding: 16px;
+        background: rgba(255,255,255,.05);
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+    }
+    .join-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .join-field label {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 700;
+        letter-spacing: .4px;
+    }
+    .join-field input {
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(0,0,0,.28);
+        color: white;
+        padding: 12px 14px;
+        border-radius: 12px;
+        outline: none;
+        font-size: 15px;
+    }
+    .join-field input:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(0,255,136,.12);
+    }
+    .join-button {
+        border: none;
+        background: linear-gradient(135deg, var(--accent-color), #00b8ff);
+        color: #04130b;
+        font-weight: 900;
+        padding: 13px 18px;
+        border-radius: 12px;
+        cursor: pointer;
+        min-width: 140px;
+    }
+    .join-tip {
+        margin-top: 8px;
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+    @media (max-width: 760px) {
+        .join-panel { grid-template-columns: 1fr; }
+        .join-button { width: 100%; }
+    }
+
 </style>
 </head>
 <body>
@@ -146,6 +203,18 @@
         </div>
     </nav>
     <main class="main-container">
+        <div class="join-panel">
+            <div class="join-field">
+                <label for="player-name-input">İsim</label>
+                <input id="player-name-input" type="text" maxlength="16" value="Ege" autocomplete="nickname">
+            </div>
+            <div class="join-field">
+                <label for="room-code-input">Oda Kodu</label>
+                <input id="room-code-input" type="text" maxlength="16" value="main" autocomplete="off">
+            </div>
+            <button class="join-button" id="btn-join-room" onclick="joinServer()">Sunucuya Gir</button>
+        </div>
+        <div class="join-tip">Aynı oda kodunu yazanlar aynı dünyaya girer. Oyuna başlayınca birbirinizi göreceksiniz.</div>
         <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
         <div class="games-grid">
             <div class="game-card" onclick="joinServer()">
@@ -211,6 +280,13 @@ const btnExit = document.getElementById('btn-exit');
 const gameUI = document.getElementById('game-ui');
 const mapStatus = document.getElementById('map-status');
 const speechLayer = document.getElementById('speech-layer');
+const nameInput = document.getElementById('player-name-input');
+const roomInput = document.getElementById('room-code-input');
+const joinRoomBtn = document.getElementById('btn-join-room');
+const profileName = document.querySelector('.user-profile span');
+const profileAvatar = document.querySelector('.avatar');
+const activeCountEl = document.getElementById('active-count');
+const playersListEl = document.getElementById('players-list');
 
 const btnFwd = document.getElementById('btn-forward');
 const btnBack = document.getElementById('btn-back');
@@ -225,7 +301,15 @@ let scene, camera, renderer;
 let player, playerBody, playerHead, playerArms = [], playerLegs = [];
 let velocityY = 0, gravity = -0.015, jumpPower = 0.36, isGrounded = false;
 let moveSpeed = 0.12, runMultiplier = 1.6, isRunning = false;
-let cameraDistance = 8, cameraHeight = 4;
+let cameraDistance = 12, cameraHeight = 6;
+let viewYaw = 0;
+let viewPitch = 0.28;
+const maxPitchUp = 0.85;
+const maxPitchDown = -0.18;
+let lookDragging = false;
+let lookPointerId = null;
+let lookLastX = 0;
+let lookLastY = 0;
 let animationId;
 
 let chunks = new Map();
@@ -254,9 +338,9 @@ let fbDb = null;
 let playersRef = null;
 let meRef = null;
 let firebaseReady = false;
-const roomId = "main";
+let roomId = localStorage.getItem('novago_room') || 'main';
+let playerName = localStorage.getItem('novago_name') || 'Ege';
 const playerId = `p_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
-const playerName = "Ege";
 const remotePlayers = new Map();
 let localLastSync = 0;
 let lastSentFartAt = 0;
@@ -289,9 +373,39 @@ function setNetworkStatus(text) {
     if (el) el.innerHTML = text;
 }
 
+
+function normalizeRoomCode(value) {
+    return String(value || 'main').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 16) || 'main';
+}
+
+function normalizePlayerName(value) {
+    return String(value || 'Ege').trim().replace(/\s+/g, ' ').slice(0, 16) || 'Ege';
+}
+
+function syncLobbyInfo() {
+    if (profileName) profileName.textContent = playerName;
+    if (profileAvatar) profileAvatar.textContent = (playerName[0] || 'E').toUpperCase();
+    if (roomInput) roomInput.value = roomId;
+    if (nameInput) nameInput.value = playerName;
+}
+
+
+if (nameInput) {
+    nameInput.addEventListener('input', () => {
+        playerName = normalizePlayerName(nameInput.value);
+        syncLobbyInfo();
+    });
+}
+if (roomInput) {
+    roomInput.addEventListener('input', () => {
+        roomId = normalizeRoomCode(roomInput.value);
+        syncLobbyInfo();
+    });
+}
+syncLobbyInfo();
 function refreshPlayerHud(players) {
-    const activeCount = document.getElementById('active-count');
-    const list = document.getElementById('players-list');
+    const activeCount = activeCountEl || document.getElementById('active-count');
+    const list = playersListEl || document.getElementById('players-list');
     if (!activeCount || !list) return;
 
     const entries = Object.entries(players || {});
@@ -343,8 +457,15 @@ function createRemoteAvatar(color = 0x66ccff) {
     legL.position.set(-0.22, 0.42, 0);
     legR.position.set(0.22, 0.42, 0);
 
-    group.add(body, head, eye1, eye2, armL, armR, legL, legR);
-    group.userData.parts = { body, head, armL, armR, legL, legR };
+    const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.62, 0.08, 8, 16),
+        new THREE.MeshStandardMaterial({ color: shirt, emissive: shirt, emissiveIntensity: 0.25 })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 2.78;
+
+    group.add(body, head, eye1, eye2, armL, armR, legL, legR, ring);
+    group.userData.parts = { body, head, armL, armR, legL, legR, ring };
     return group;
 }
 
@@ -518,14 +639,22 @@ function addLog(text) {
 }
 
 function joinServer() {
+    roomId = normalizeRoomCode(roomInput ? roomInput.value : roomId);
+    playerName = normalizePlayerName(nameInput ? nameInput.value : playerName);
+
+    localStorage.setItem('novago_room', roomId);
+    localStorage.setItem('novago_name', playerName);
+    syncLobbyInfo();
+
     hubContainer.style.display = 'none';
     gameContainer.style.display = 'block';
     loadingScreen.style.display = 'flex';
     serverLogs.innerHTML = '<p>Uzak sunucu IP\'si aranıyor...</p>';
-    setTimeout(() => addLog('Kimlik doğrulanıyor (Ege)...'), 800);
+    setNetworkStatus(`Oda: <strong>${roomId}</strong> • Oyuncu: <strong>${playerName}</strong>`);
+    setTimeout(() => addLog(`Kimlik doğrulanıyor (${playerName})...`), 800);
     setTimeout(() => addLog('Dünya verileri indiriliyor...'), 1600);
     setTimeout(() => addLog('Çevre detayları hazırlanıyor...'), 2300);
-    setTimeout(() => addLog('Fizik motoru başlatılıyor...'), 3000);
+    setTimeout(() => addLog('Buluşma alanı yükleniyor...'), 3000);
     setTimeout(() => { loadingText.innerText = 'Sunucuya Katılındı!'; loadingText.style.color = '#ffffff'; }, 3400);
     setTimeout(() => {
         loadingScreen.style.display = 'none';
@@ -538,6 +667,7 @@ function joinServer() {
 }
 
 function exitGame() {
+
     gameActive = false;
     cancelAnimationFrame(animationId);
     if (renderer && renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
@@ -606,57 +736,74 @@ function makeTree() {
 
 function makeHouse() {
     const group = new THREE.Group();
-    const w = 3.5 + Math.random() * 1.5;
-    const d = 3.5 + Math.random() * 1.5;
-    const h = 2.2 + Math.random() * 0.8;
+    const w = 4.2 + Math.random() * 1.2;
+    const d = 4.2 + Math.random() * 1.2;
+    const h = 2.4 + Math.random() * 0.6;
 
-    const base = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color: 0xb8a38b })
+    const floor = new THREE.Mesh(
+        new THREE.BoxGeometry(w, 0.16, d),
+        new THREE.MeshStandardMaterial({ color: 0x92715d })
     );
-    base.position.y = h / 2;
-    base.castShadow = true;
-    base.receiveShadow = true;
-    group.add(base);
+    floor.position.y = 0.08;
+    floor.receiveShadow = true;
+    group.add(floor);
+
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0xc9b19a });
+    const side1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, h, d), wallMat);
+    const side2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, h, d), wallMat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.18), wallMat);
+    side1.position.set(-w / 2 + 0.09, h / 2 + 0.16, 0);
+    side2.position.set(w / 2 - 0.09, h / 2 + 0.16, 0);
+    back.position.set(0, h / 2 + 0.16, -d / 2 + 0.09);
+    side1.castShadow = side2.castShadow = back.castShadow = true;
+    side1.receiveShadow = side2.receiveShadow = back.receiveShadow = true;
+    group.add(side1, side2, back);
+
+    const frontLeft = new THREE.Mesh(new THREE.BoxGeometry((w - 1.1) / 2, h, 0.18), wallMat);
+    const frontRight = new THREE.Mesh(new THREE.BoxGeometry((w - 1.1) / 2, h, 0.18), wallMat);
+    const frontTop = new THREE.Mesh(new THREE.BoxGeometry(1.1, h - 1.35, 0.18), wallMat);
+    frontLeft.position.set(-(w - 1.1) / 4 - 0.55, h / 2 + 0.16, d / 2 - 0.09);
+    frontRight.position.set((w - 1.1) / 4 + 0.55, h / 2 + 0.16, d / 2 - 0.09);
+    frontTop.position.set(0, 1.95, d / 2 - 0.09);
+    group.add(frontLeft, frontRight, frontTop);
 
     const roof = new THREE.Mesh(
-        new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.8, 4),
+        new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.9, 4),
         new THREE.MeshStandardMaterial({ color: 0x8b3f2f })
     );
-    roof.position.y = h + 0.9;
+    roof.position.y = h + 1.0;
     roof.rotation.y = Math.PI / 4;
     roof.castShadow = true;
     group.add(roof);
 
     const door = new THREE.Mesh(
-        new THREE.BoxGeometry(0.7, 1.2, 0.08),
+        new THREE.BoxGeometry(0.85, 1.2, 0.08),
         new THREE.MeshStandardMaterial({ color: 0x5b3c2f })
     );
-    door.position.set(0, 0.6, d / 2 + 0.05);
+    door.position.set(0, 0.72, d / 2 + 0.05);
     group.add(door);
 
-    const windowMat = new THREE.MeshStandardMaterial({ color: 0xaee8ff, emissive: 0x225566, emissiveIntensity: 0.35 });
+    const windowMat = new THREE.MeshStandardMaterial({ color: 0xaee8ff, emissive: 0x225566, emissiveIntensity: 0.45 });
     [-1, 1].forEach((side) => {
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.55, 0.08), windowMat);
-        win.position.set(side * (w * 0.25), 1.35, d / 2 + 0.05);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.08), windowMat);
+        win.position.set(side * (w * 0.26), 1.5, d / 2 + 0.05);
         group.add(win);
     });
 
-    const chimney = new THREE.Mesh(
-        new THREE.BoxGeometry(0.35, 0.9, 0.35),
-        new THREE.MeshStandardMaterial({ color: 0x6a4a3a })
-    );
-    chimney.position.set(w * 0.28, h + 1.2, -d * 0.12);
-    group.add(chimney);
+    const interior = new THREE.PointLight(0xfff2d0, 0.55, 12);
+    interior.position.set(0, 1.8, 0);
+    group.add(interior);
 
+    group.userData.enterable = true;
     return group;
 }
 
+
 function makeNpc() {
     const group = new THREE.Group();
-    const bodyColor = Math.random() > 0.5 ? 0x4dd0e1 : 0xff8f6b;
-    const skin = 0xf1c7a1;
-    const pantsColor = 0x2f3d59;
+    const bodyColor = [0x4dd0e1, 0xff8f6b, 0xa78bfa, 0xf59e0b][Math.floor(Math.random() * 4)];
+    const skin = [0xf1c7a1, 0xd8a07a, 0xffd2b3, 0xb98268][Math.floor(Math.random() * 4)];
+    const pantsColor = [0x2f3d59, 0x334155, 0x1f2937][Math.floor(Math.random() * 3)];
 
     const body = new THREE.Mesh(
         new THREE.BoxGeometry(0.9, 1.1, 0.55),
@@ -697,7 +844,16 @@ function makeNpc() {
     const legR = new THREE.Mesh(legGeo, legMat);
     legL.position.set(-0.2, 0.4, 0);
     legR.position.set(0.2, 0.4, 0);
-    group.add(legL, legR);
+
+    const hat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.34, 0.16, 8),
+        new THREE.MeshStandardMaterial({ color: 0x111827 })
+    );
+    hat.position.y = 2.52;
+    hat.rotation.y = Math.random() * Math.PI;
+
+    group.add(legL, legR, hat);
+    group.userData.npcName = ['Mert', 'Ada', 'Sude', 'Arda', 'Deniz'][Math.floor(Math.random() * 5)];
 
     return group;
 }
@@ -871,7 +1027,10 @@ function triggerFartAt(origin, remote = false) {
     npcs.forEach(npc => {
         const npcPos = new THREE.Vector3();
         npc.mesh.getWorldPosition(npcPos);
-        if (npcPos.distanceTo(origin) < 10) npc.speechUntil = now + 2000;
+        if (npcPos.distanceTo(origin) < 10) {
+            npc.speechUntil = now + 2000;
+            npc.reactedToFart = true;
+        }
     });
 
     destroyNearbyObjects(9.5, origin);
@@ -934,24 +1093,26 @@ function startGameEngine() {
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 18, 90);
+    scene.fog = new THREE.Fog(0x87ceeb, 35, 180);
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 4, 8);
+    camera.position.set(0, cameraHeight, cameraDistance);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
+    setupLookControls();
 
-    hemiLight = new THREE.HemisphereLight(0xffffff, 0x446644, 0.9);
+    hemiLight = new THREE.HemisphereLight(0xffffff, 0x8fd18a, 1.1);
     scene.add(hemiLight);
     sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
     sunLight.position.set(10, 20, 10);
     sunLight.castShadow = true;
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
     scene.add(ambientLight);
 
     const sun = new THREE.Mesh(
@@ -977,6 +1138,27 @@ function startGameEngine() {
     }
 
     buildPlayer();
+
+    const meetingPad = new THREE.Mesh(
+        new THREE.CylinderGeometry(4.5, 4.5, 0.2, 24),
+        new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x102a4a, emissiveIntensity: 0.4 })
+    );
+    meetingPad.position.set(0, 0.1, 0);
+    meetingPad.receiveShadow = true;
+    scene.add(meetingPad);
+
+    const meetingPillar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 8, 10),
+        new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.4 })
+    );
+    meetingPillar.position.set(0, 4.1, 0);
+    meetingPillar.castShadow = true;
+    scene.add(meetingPillar);
+
+    const meetingGlow = new THREE.PointLight(0x00ff88, 1.2, 20);
+    meetingGlow.position.set(0, 4.5, 0);
+    scene.add(meetingGlow);
+
     updateChunks();
     initMultiplayer();
     if (!startGameEngine._resizeBound) { window.addEventListener('resize', onWindowResize, false); startGameEngine._resizeBound = true; }
@@ -1055,6 +1237,52 @@ if (btnFart) btnFart.addEventListener('pointerdown', e => { e.preventDefault(); 
 if (btnJmp) btnJmp.addEventListener('pointerdown', e => { e.preventDefault(); if (isGrounded) { velocityY = jumpPower; isGrounded = false; } });
 setupJoystick();
 
+function setupLookControls() {
+    const target = renderer ? renderer.domElement : null;
+    if (!target) return;
+
+    const isUiTarget = (el) => {
+        return !!el && (
+            el.closest('#mobile-controls') ||
+            el.closest('#joystick-area') ||
+            el.closest('#btn-exit') ||
+            el.closest('#game-ui') ||
+            el.closest('.join-panel')
+        );
+    };
+
+    const down = (e) => {
+        if (isUiTarget(e.target)) return;
+        lookDragging = true;
+        lookPointerId = e.pointerId;
+        lookLastX = e.clientX;
+        lookLastY = e.clientY;
+        target.setPointerCapture?.(e.pointerId);
+    };
+
+    const move = (e) => {
+        if (!lookDragging || e.pointerId !== lookPointerId) return;
+        const dx = e.clientX - lookLastX;
+        const dy = e.clientY - lookLastY;
+        lookLastX = e.clientX;
+        lookLastY = e.clientY;
+        viewYaw -= dx * 0.006;
+        viewPitch = Math.max(maxPitchDown, Math.min(maxPitchUp, viewPitch - dy * 0.004));
+    };
+
+    const up = (e) => {
+        if (e.pointerId !== lookPointerId) return;
+        lookDragging = false;
+        lookPointerId = null;
+    };
+
+    target.addEventListener('pointerdown', down);
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', up);
+    target.addEventListener('pointercancel', up);
+}
+
+
 document.addEventListener('keydown', e => {
     if (['KeyW','ArrowUp'].includes(e.code)) moveForward = true;
     if (['KeyS','ArrowDown'].includes(e.code)) moveBack = true;
@@ -1095,7 +1323,7 @@ function updateMovement() {
     if (moveVec.lengthSq() > 0) {
         moveVec.normalize();
         const speed = moveSpeed * (isRunning ? runMultiplier : 1);
-        const yaw = player.rotation.y;
+        const yaw = viewYaw;
         const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
         const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
         const worldMove = new THREE.Vector3();
@@ -1119,6 +1347,19 @@ function updateNpcAI(dt) {
     const now = performance.now();
     npcs.forEach(npc => {
         const p = npc.mesh.position;
+        const playerPos = player.position;
+        const distToPlayer = Math.hypot(playerPos.x - p.x, playerPos.z - p.z);
+
+        if (distToPlayer < 6) {
+            npc.speechUntil = now + 1800;
+            if (!npc.reactedToFart) npc.label.textContent = 'Selam!';
+            npc.targetX = p.x + (p.x - playerPos.x) * 1.4;
+            npc.targetZ = p.z + (p.z - playerPos.z) * 1.4;
+        }
+        if (distToPlayer >= 6 && now > npc.speechUntil) {
+            npc.reactedToFart = false;
+        }
+
         if (now > npc.nextThink || Math.abs(p.x - npc.targetX) < 0.2 && Math.abs(p.z - npc.targetZ) < 0.2) {
             const home = chunks.get(npc.chunkKey);
             if (home) {
@@ -1154,7 +1395,11 @@ function updateNpcLabels() {
         const active = npc.speechUntil > now && visible;
         npc.label.classList.toggle('show', active);
         npc.label.style.display = visible ? 'block' : 'none';
-        if (active) npc.label.textContent = 'ıyy pis koktu';
+        if (active) {
+            npc.label.textContent = npc.reactedToFart ? 'ıyy pis koktu' : 'Selam!';
+        } else {
+            npc.label.textContent = npc.mesh.userData.npcName || 'NPC';
+        }
     });
     updateRemoteTags();
 }
@@ -1243,11 +1488,12 @@ function animate() {
     });
 
     // camera follow
-    const yaw = player.rotation.y;
-    const cameraOffset = new THREE.Vector3(0, cameraHeight, cameraDistance).applyAxisAngle(new THREE.Vector3(0,1,0), yaw);
-    const desired = player.position.clone().add(cameraOffset);
+    const orbit = new THREE.Vector3(0, cameraHeight, cameraDistance);
+    orbit.applyAxisAngle(new THREE.Vector3(1, 0, 0), viewPitch);
+    orbit.applyAxisAngle(new THREE.Vector3(0, 1, 0), viewYaw);
+    const desired = player.position.clone().add(orbit);
     camera.position.lerp(desired, 0.1);
-    camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+    camera.lookAt(player.position.x, player.position.y + 1.6, player.position.z);
 
     // player walk animation
     const walk = (moveForward || moveBack || moveLeft || moveRight || Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
