@@ -2,8 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaGo Hub | Kendi Oyun Dünyan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NovaGo Hub | Ege</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
             --bg-color: #0f1015;
@@ -19,15 +20,29 @@
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none; /* Mobilde yazıları seçmeyi engelle */
         }
 
-        body {
+        body, html {
+            width: 100%;
+            height: 100%;
             background-color: var(--bg-color);
             color: var(--text-main);
-            overflow-x: hidden;
+            overflow: hidden; /* Oyun için kaydırmayı kapat */
         }
 
-        /* Üst Menü (Navbar) */
+        /* --- HUB ARAYÜZÜ (ROBLOX STİLİ) --- */
+        #hub-container {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            position: absolute;
+            top: 0; left: 0;
+            z-index: 10;
+            background-color: var(--bg-color);
+            transition: opacity 0.5s;
+        }
+
         .navbar {
             background-color: var(--navbar-bg);
             padding: 15px 40px;
@@ -66,18 +81,6 @@
             color: var(--text-main);
         }
 
-        .nav-links a {
-            color: var(--text-main);
-            text-decoration: none;
-            margin-left: 25px;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--accent-color);
-        }
-
         .user-profile {
             display: flex;
             align-items: center;
@@ -86,6 +89,7 @@
             padding: 5px 15px 5px 5px;
             border-radius: 20px;
             cursor: pointer;
+            border: 1px solid var(--accent-color);
         }
 
         .avatar {
@@ -100,7 +104,6 @@
             font-weight: bold;
         }
 
-        /* Ana İçerik */
         .main-container {
             padding: 40px;
             max-width: 1400px;
@@ -116,7 +119,6 @@
             gap: 10px;
         }
 
-        /* Oyun Izgarası */
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -130,11 +132,13 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             position: relative;
             cursor: pointer;
+            border: 1px solid transparent;
         }
 
         .game-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 10px 20px rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--accent-color);
         }
 
         .game-thumbnail {
@@ -146,13 +150,6 @@
             justify-content: center;
             font-size: 50px;
             position: relative;
-        }
-
-        .game-thumbnail::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.7));
         }
 
         .play-btn-overlay {
@@ -193,210 +190,420 @@
             margin-bottom: 15px;
         }
 
-        .game-stats {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            color: var(--text-muted);
-            border-top: 1px solid #2a2b38;
-            padding-top: 15px;
-        }
-
-        /* Modal (Oyun Açılış Ekranı) */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background-color: var(--navbar-bg);
-            width: 80%;
-            max-width: 900px;
-            height: 70%;
-            border-radius: 20px;
-            padding: 30px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid #2a2b38;
-        }
-
-        .close-btn {
+        /* --- OYUN EKRANI VE KONTROLLER --- */
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: none; /* Başlangıçta gizli */
             position: absolute;
-            top: 20px;
-            right: 25px;
-            font-size: 30px;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: color 0.3s;
+            top: 0; left: 0;
+            z-index: 20;
+            background-color: #000;
         }
 
-        .close-btn:hover {
-            color: #ff3366;
-        }
-
-        .game-frame-placeholder {
-            flex: 1;
-            background-color: #0a0b0e;
-            border-radius: 10px;
-            margin-top: 20px;
+        /* Sunucuya Katılma Ekranı */
+        #loading-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(15, 16, 21, 0.95);
+            z-index: 30;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            color: var(--accent-color);
-            border: 2px dashed #2a2b38;
         }
 
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #2a2b38;
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #2a2b38;
             border-top-color: var(--accent-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        #loading-text {
+            margin-top: 20px;
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--accent-color);
         }
+
+        #server-logs {
+            margin-top: 15px;
+            font-family: monospace;
+            color: var(--text-muted);
+            text-align: center;
+            font-size: 14px;
+            max-width: 400px;
+        }
+
+        /* Mobil Butonlar */
+        .mobile-controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 40;
+            pointer-events: none; /* Konteyner tıklanmasın, butonlar tıklansın */
+        }
+
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            color: white;
+            pointer-events: auto;
+            backdrop-filter: blur(5px);
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .control-btn:active {
+            background-color: rgba(0, 255, 136, 0.4);
+            border-color: var(--accent-color);
+            transform: scale(0.9);
+        }
+
+        #btn-exit {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #ff3366;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 40;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+
+        /* Oyun İçi Chat / Oyuncu Listesi Simülasyonu */
+        #game-ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 40;
+            pointer-events: none;
+        }
+
+        .player-list {
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .player-list span { color: var(--accent-color); font-weight: bold; }
+
     </style>
 </head>
 <body>
 
-    <nav class="navbar">
-        <div class="brand-container">
-            <div class="logo">NG</div>
-            <div class="brand-name">NovaGo Hub</div>
-        </div>
-        
-        <div class="nav-links">
-            <a href="#">Keşfet</a>
-            <a href="#">Oluştur</a>
-            <a href="#">Market</a>
-        </div>
-
-        <div class="user-profile">
-            <div class="avatar">G</div>
-            <span>GamingAlpPro</span>
-        </div>
-    </nav>
-
-    <main class="main-container">
-        <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
-        
-        <div class="games-grid">
+    <div id="hub-container">
+        <nav class="navbar">
+            <div class="brand-container">
+                <div class="logo">NG</div>
+                <div class="brand-name">NovaGo Hub</div>
+            </div>
             
-            <div class="game-card" onclick="openGame('10 Nights at the Market', 'Three.js / Firebase')">
-                <div class="game-thumbnail">
-                    🛒
-                    <div class="play-btn-overlay">▶</div>
-                </div>
-                <div class="game-info">
-                    <div class="game-title">10 Nights at the Market</div>
-                    <div class="game-developer">Geliştirici: GamingAlpPro</div>
-                    <div class="game-stats">
-                        <span>⭐ %95 Beğeni</span>
-                        <span>👥 1.2K Aktif</span>
-                    </div>
-                </div>
+            <div class="user-profile">
+                <div class="avatar">E</div>
+                <span>Ege</span>
             </div>
+        </nav>
 
-            <div class="game-card" onclick="openGame('Hayatta Kalma Macerası', 'Three.js 3D Engine')">
-                <div class="game-thumbnail">
-                    🏕️
-                    <div class="play-btn-overlay">▶</div>
-                </div>
-                <div class="game-info">
-                    <div class="game-title">Hayatta Kalma Macerası</div>
-                    <div class="game-developer">Geliştirici: NovaGo</div>
-                    <div class="game-stats">
-                        <span>⭐ %88 Beğeni</span>
-                        <span>👥 850 Aktif</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="game-card" onclick="openGame('Balıkçılık Simülatörü', 'Fizik Motoru Aktif')">
-                <div class="game-thumbnail">
-                    🎣
-                    <div class="play-btn-overlay">▶</div>
-                </div>
-                <div class="game-info">
-                    <div class="game-title">Balıkçılık Simülatörü</div>
-                    <div class="game-developer">Geliştirici: GamingAlpPro</div>
-                    <div class="game-stats">
-                        <span>⭐ %92 Beğeni</span>
-                        <span>👥 340 Aktif</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="game-card" onclick="openGame('Blok Evreni Düzenleyici', 'WorldEdit Entegrasyonu')">
-                <div class="game-thumbnail">
-                    🧱
-                    <div class="play-btn-overlay">▶</div>
-                </div>
-                <div class="game-info">
-                    <div class="game-title">Blok Evreni Düzenleyici</div>
-                    <div class="game-developer">Geliştirici: NovaGo</div>
-                    <div class="game-stats">
-                        <span>⭐ %98 Beğeni</span>
-                        <span>👥 2.1K Aktif</span>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </main>
-
-    <div class="modal" id="gameModal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeGame()">&times;</span>
-            <h2 id="modalGameTitle" style="color: var(--text-main);">Oyun Yükleniyor...</h2>
-            <p id="modalGameTech" style="color: var(--text-muted); margin-top: 5px;"></p>
+        <main class="main-container">
+            <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
             
-            <div class="game-frame-placeholder">
-                <div class="loading-spinner"></div>
-                <h3 style="margin-bottom: 10px;">Sunucuya Bağlanılıyor...</h3>
-                <p style="color: var(--text-muted); text-align: center;">Gerçek oyun dosyalarını (örn: game1.html) buraya bir &lt;iframe&gt; ile bağlayabilirsin.</p>
+            <div class="games-grid">
+                <div class="game-card" onclick="joinServer()">
+                    <div class="game-thumbnail">
+                        🌍
+                        <div class="play-btn-overlay">▶</div>
+                    </div>
+                    <div class="game-info">
+                        <div class="game-title">Ege'nin 3D Dünyası</div>
+                        <div class="game-developer">Geliştirici: Ege</div>
+                        <div style="color: var(--accent-color); margin-top: 10px; font-weight: bold;">
+                            🟢 Sunucu Çevrimiçi - Tıkla ve Katıl
+                        </div>
+                    </div>
+                </div>
             </div>
+        </main>
+    </div>
+
+    <div id="game-container">
+        <div id="loading-screen">
+            <div class="spinner"></div>
+            <div id="loading-text">Sunucuya Bağlanılıyor...</div>
+            <div id="server-logs">
+                <p>Uzak sunucu IP'si aranıyor...</p>
+            </div>
+        </div>
+
+        <div id="canvas-container" style="width: 100%; height: 100%;"></div>
+
+        <div id="game-ui" style="display: none;">
+            <div class="player-list">
+                👥 Çevrimiçi Oyuncular:<br>
+                - <span>Ege</span> (Sen)<br>
+                - <span>NovaOyuncu_99</span>
+            </div>
+        </div>
+
+        <button id="btn-exit" style="display: none;" onclick="exitGame()">Oyundan Çık</button>
+
+        <div class="mobile-controls" id="mobile-controls" style="display: none;">
+            <div class="control-btn" id="btn-forward">⬆️</div>
+            <div class="control-btn" id="btn-jump">⏫</div>
         </div>
     </div>
 
     <script>
-        const modal = document.getElementById("gameModal");
-        const titleElement = document.getElementById("modalGameTitle");
-        const techElement = document.getElementById("modalGameTech");
+        // DOM Elementleri
+        const hubContainer = document.getElementById("hub-container");
+        const gameContainer = document.getElementById("game-container");
+        const loadingScreen = document.getElementById("loading-screen");
+        const loadingText = document.getElementById("loading-text");
+        const serverLogs = document.getElementById("server-logs");
+        const mobileControls = document.getElementById("mobile-controls");
+        const btnExit = document.getElementById("btn-exit");
+        const gameUI = document.getElementById("game-ui");
 
-        // Oyuna Tıklandığında Modal'ı Aç
-        function openGame(gameName, techDetails) {
-            titleElement.innerText = gameName;
-            techElement.innerText = "Motor: " + techDetails;
-            modal.style.display = "flex";
+        // Kontrol Değişkenleri
+        let moveForward = false;
+        let doJump = false;
+        let gameActive = false;
+
+        // Three.js Değişkenleri
+        let scene, camera, renderer;
+        let player, ground;
+        
+        // Fizik Değişkenleri
+        let velocityY = 0;
+        let gravity = -0.015; // Düşme (Yerçekimi) gücü
+        let jumpPower = 0.35; // Zıplama gücü
+        let isGrounded = false;
+        let moveSpeed = 0.15;
+
+        let animationId;
+
+        // --- SUNUCUYA KATILMA SİMÜLASYONU ---
+        function joinServer() {
+            hubContainer.style.display = "none";
+            gameContainer.style.display = "block";
+            loadingScreen.style.display = "flex";
             
-            // İstersen burada iframe kaynağını değiştirecek kodlar yazabilirsin
-            // Örnek: document.getElementById("myIframe").src = gameName + ".html";
+            // Log simülasyonu
+            setTimeout(() => { addLog("Kimlik doğrulanıyor (Ege)..."); }, 800);
+            setTimeout(() => { addLog("Dünya verileri indiriliyor..."); }, 1600);
+            setTimeout(() => { addLog("Fizik motoru başlatılıyor..."); }, 2400);
+            setTimeout(() => { 
+                loadingText.innerText = "Sunucuya Katılındı!";
+                loadingText.style.color = "#ffffff";
+            }, 3000);
+            
+            setTimeout(() => {
+                loadingScreen.style.display = "none";
+                mobileControls.style.display = "flex";
+                btnExit.style.display = "block";
+                gameUI.style.display = "block";
+                startGameEngine();
+            }, 3500);
         }
 
-        // Çarpıya Basınca Kapat
-        function closeGame() {
-            modal.style.display = "none";
+        function addLog(text) {
+            const p = document.createElement("p");
+            p.innerText = text;
+            serverLogs.appendChild(p);
         }
 
-        // Modal dışına tıklayınca kapatma
-        window.onclick = function(event) {
-            if (event.target == modal) {
-                closeGame();
+        function exitGame() {
+            gameActive = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById("canvas-container").innerHTML = ""; // Canvas'ı temizle
+            
+            gameContainer.style.display = "none";
+            mobileControls.style.display = "none";
+            btnExit.style.display = "none";
+            gameUI.style.display = "none";
+            hubContainer.style.display = "block";
+            
+            // Logları sıfırla
+            serverLogs.innerHTML = "<p>Uzak sunucu IP'si aranıyor...</p>";
+            loadingText.innerText = "Sunucuya Bağlanılıyor...";
+            loadingText.style.color = "var(--accent-color)";
+        }
+
+        // --- THREE.JS 3D OYUN MOTORU VE FİZİK ---
+        function startGameEngine() {
+            gameActive = true;
+            const container = document.getElementById("canvas-container");
+
+            // 1. Sahne (Scene)
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB); // Gökyüzü mavisi
+            scene.fog = new THREE.Fog(0x87CEEB, 10, 50); // Uzaklık sisi
+
+            // 2. Kamera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 8); // Oyuncunun arkasında
+
+            // 3. Render Motoru
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // 4. Işıklandırma
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            // 5. Zemin (Ground)
+            const groundGeo = new THREE.PlaneGeometry(100, 100);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x228B22 }); // Çimen yeşili
+            ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2; // Yere yatır
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // Zemin Izgarası (Grid)
+            const gridHelper = new THREE.GridHelper(100, 100, 0x000000, 0x000000);
+            gridHelper.material.opacity = 0.2;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+
+            // 6. Oyuncu (Karakter - Ege)
+            const playerGeo = new THREE.BoxGeometry(1, 2, 1); // İnsan boyutuna yakın bir kutu
+            const playerMat = new THREE.MeshStandardMaterial({ color: 0xff3366 });
+            player = new THREE.Mesh(playerGeo, playerMat);
+            player.position.y = 10; // Havadan doğsun (Düşme animasyonu için yüksekten bırakıyoruz)
+            player.castShadow = true;
+            scene.add(player);
+
+            // Rastgele Engeller/Platformlar (Dünya dolu gözüksün)
+            for(let i=0; i<20; i++) {
+                const boxSize = Math.random() * 2 + 1;
+                const bGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+                const bMat = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+                const bMesh = new THREE.Mesh(bGeo, bMat);
+                bMesh.position.x = (Math.random() - 0.5) * 40;
+                bMesh.position.z = (Math.random() - 0.5) * 40 - 10;
+                bMesh.position.y = boxSize / 2;
+                bMesh.castShadow = true;
+                bMesh.receiveShadow = true;
+                scene.add(bMesh);
             }
+
+            // Yeniden boyutlandırma dinleyicisi
+            window.addEventListener('resize', onWindowResize, false);
+
+            animate();
+        }
+
+        // --- MOBİL BUTON KONTROLLERİ ---
+        const btnFwd = document.getElementById("btn-forward");
+        const btnJmp = document.getElementById("btn-jump");
+
+        // İleri Butonu (Basılı tutuldukça gider)
+        btnFwd.addEventListener("pointerdown", () => moveForward = true);
+        btnFwd.addEventListener("pointerup", () => moveForward = false);
+        btnFwd.addEventListener("pointerleave", () => moveForward = false);
+
+        // Zıplama Butonu (Basınca zıplar)
+        btnJmp.addEventListener("pointerdown", () => {
+            if (isGrounded) {
+                velocityY = jumpPower; // Zıplama gücünü uygula
+                isGrounded = false;
+            }
+        });
+
+        // Klavye desteği (PC için)
+        document.addEventListener('keydown', (e) => {
+            if(e.code === 'KeyW' || e.code === 'ArrowUp') moveForward = true;
+            if(e.code === 'Space' && isGrounded) { velocityY = jumpPower; isGrounded = false; }
+        });
+        document.addEventListener('keyup', (e) => {
+            if(e.code === 'KeyW' || e.code === 'ArrowUp') moveForward = false;
+        });
+
+        // Pencere Boyutu Değişimi
+        function onWindowResize() {
+            if(!camera || !renderer) return;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- ANA OYUN DÖNGÜSÜ (FİZİK VE RENDER) ---
+        function animate() {
+            if (!gameActive) return;
+            animationId = requestAnimationFrame(animate);
+
+            // 1. Yerçekimi ve Düşme Fiziği
+            velocityY += gravity; // Her karede aşağı doğru çekim uygula
+            player.position.y += velocityY;
+
+            // Zemin Çarpışma Kontrolü (Karakterin boyu 2 birim, merkezi 1. birimde)
+            if (player.position.y <= 1) {
+                player.position.y = 1; // Yerin altına düşmesini engelle
+                velocityY = 0; // Düşme hızını sıfırla
+                isGrounded = true; // Yerde olduğunu onayla
+            } else {
+                isGrounded = false; // Havadayken
+            }
+
+            // 2. İleri Hareket
+            if (moveForward) {
+                player.translateZ(-moveSpeed); // Kendi ekseninde ileri (Z ekseni eksi yönü)
+                // Yürürken küçük bir sallanma efekti (Bobbing)
+                if (isGrounded) {
+                    player.rotation.z = Math.sin(Date.now() * 0.01) * 0.05;
+                }
+            } else {
+                player.rotation.z = 0; // Durunca dik dur
+            }
+
+            // Düşerken Hafif Takla Atma Efekti (Zevk için)
+            if (!isGrounded && velocityY < 0) {
+                player.rotation.x -= 0.02; // Düşerken öne eğilme
+            } else {
+                player.rotation.x = 0; // Yere basınca düzel
+            }
+
+            // 3. Kamera Takibi
+            // Kamerayı oyuncunun arkasında ve biraz yukarısında tut
+            const relativeCameraOffset = new THREE.Vector3(0, 4, 8);
+            const cameraOffset = relativeCameraOffset.applyMatrix4(player.matrixWorld);
+            
+            // Kamera yumuşak bir şekilde oyuncuyu takip etsin (Lerp)
+            camera.position.lerp(cameraOffset, 0.1);
+            camera.lookAt(player.position);
+
+            // Sahneyi Çiz
+            renderer.render(scene, camera);
         }
     </script>
-
 </body>
 </html>
