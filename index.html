@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Ege</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <style>
     :root {
         --bg-color: #0f1015;
@@ -60,10 +62,75 @@
     .control-btn { width:72px; height:72px; background: rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; pointer-events:auto; backdrop-filter: blur(5px); transition: background-color .2s, transform .1s; }
     .control-btn:active { background: rgba(0,255,136,.4); border-color: var(--accent-color); transform: scale(.9); }
     .control-btn.small { width:68px; height:68px; font-size:24px; }
+    .mobile-controls .controls-row:first-child { display:none; }
 
     .hud-bottom { position:absolute; left:20px; bottom:20px; z-index:40; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
     .hud-pill { background: var(--panel); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 12px; font-size:13px; backdrop-filter: blur(6px); }
     .fart-particle { pointer-events:none; }
+
+    #network-status {
+        position:absolute;
+        top:20px;
+        right:20px;
+        z-index:40;
+        background: var(--panel);
+        color:#fff;
+        padding:10px 14px;
+        border-radius:10px;
+        border:1px solid rgba(255,255,255,.12);
+        font-size:14px;
+        backdrop-filter: blur(6px);
+        pointer-events:none;
+    }
+    #network-status strong { color: var(--accent-color); }
+    .player-list { line-height: 1.45; }
+    .player-row {
+        display:flex;
+        align-items:center;
+        gap:8px;
+        margin-top:4px;
+        white-space:nowrap;
+    }
+    .player-dot {
+        width:10px;
+        height:10px;
+        border-radius:50%;
+        box-shadow:0 0 10px rgba(255,255,255,.2);
+        flex:0 0 auto;
+    }
+    #joystick-area {
+        position:absolute;
+        left:22px;
+        bottom:22px;
+        width:150px;
+        height:150px;
+        z-index:45;
+        pointer-events:none;
+    }
+    #joystick-base {
+        position:absolute;
+        inset:0;
+        border-radius:50%;
+        background: rgba(255,255,255,.08);
+        border:2px solid rgba(255,255,255,.18);
+        backdrop-filter: blur(6px);
+        pointer-events:auto;
+        touch-action:none;
+    }
+    #joystick-stick {
+        position:absolute;
+        left:50%;
+        top:50%;
+        width:62px;
+        height:62px;
+        border-radius:50%;
+        transform: translate(-50%,-50%);
+        background: rgba(0,255,136,.42);
+        border:2px solid rgba(0,255,136,.8);
+        box-shadow:0 0 18px rgba(0,255,136,.28);
+        pointer-events:none;
+        transition: transform .05s linear;
+    }
 </style>
 </head>
 <body>
@@ -102,10 +169,17 @@
 
     <div id="canvas-container" style="width:100%;height:100%;"></div>
     <div id="game-ui" style="display:none;">
-        <div class="player-list">👥 Çevrimiçi Oyuncular:<br>- <span>Ege</span> (Sen)<br>- <span>NovaOyuncu_99</span></div>
+        <div class="player-list">
+            👥 Aktif Oyuncular: <strong><span id="active-count">1</span></strong><br>
+            <div id="players-list" style="margin-top:6px;"></div>
+        </div>
     </div>
     <div id="speech-layer"></div>
     <div id="map-status">Harita yükleniyor...</div>
+    <div id="network-status">Bağlantı hazırlanıyor...</div>
+    <div id="joystick-area">
+        <div id="joystick-base"><div id="joystick-stick"></div></div>
+    </div>
     <div class="hud-bottom">
         <div class="hud-pill">WASD / Ok tuşları: hareket • Space: zıpla • F / 💨: osur</div>
         <div class="hud-pill">Harita yürüdükçe yüklenir ve uzaktakiler silinir</div>
@@ -164,6 +238,36 @@ let worldTime = 0;
 let lastPlayerYaw = 0;
 let sunLight, hemiLight;
 
+// --- Firebase / Multiplayer ---
+const firebaseConfig = {
+    apiKey: "AIzaSyA3r0cvDZ5R6nyjN0UKW8zy_cbuvx8YhKM",
+    authDomain: "traffic-8da63.firebaseapp.com",
+    databaseURL: "https://traffic-8da63-default-rtdb.firebaseio.com",
+    projectId: "traffic-8da63",
+    storageBucket: "traffic-8da63.firebasestorage.app",
+    messagingSenderId: "295572062519",
+    appId: "1:295572062519:web:ec0c1a639c63ceda139ab2",
+    measurementId: "G-YFKSQWS0F7"
+};
+let fbApp = null;
+let fbDb = null;
+let playersRef = null;
+let meRef = null;
+let firebaseReady = false;
+const roomId = "main";
+const playerId = `p_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
+const playerName = "Ege";
+const remotePlayers = new Map();
+let localLastSync = 0;
+let lastSentFartAt = 0;
+
+// joystick
+let joystickX = 0;
+let joystickY = 0;
+let joystickActive = false;
+let joystickPointerId = null;
+let joystickCenter = { x: 0, y: 0 };
+
 const CHUNK_SIZE = 24;
 const CHUNK_RADIUS = 2;
 const WORLD_SEED = 1337;
@@ -179,7 +283,240 @@ function showMapStatus(text) {
     clearTimeout(showMapStatus._timer);
     showMapStatus._timer = setTimeout(() => mapStatus.classList.remove('show'), 1100);
 }
-function addLog(text) { const p = document.createElement('p'); p.innerText = text; serverLogs.appendChild(p); }
+
+function setNetworkStatus(text) {
+    const el = document.getElementById('network-status');
+    if (el) el.innerHTML = text;
+}
+
+function refreshPlayerHud(players) {
+    const activeCount = document.getElementById('active-count');
+    const list = document.getElementById('players-list');
+    if (!activeCount || !list) return;
+
+    const entries = Object.entries(players || {});
+    activeCount.textContent = String(entries.length);
+
+    list.innerHTML = entries.length
+        ? entries.map(([id, p]) => {
+            const color = p.color || '#ffffff';
+            const name = p.name || 'Oyuncu';
+            const meTag = id === playerId ? ' <span style="color:var(--accent-color)">(Sen)</span>' : '';
+            return `<div class="player-row"><span class="player-dot" style="background:${color}"></span><span style="color:${color}">${name}</span>${meTag}</div>`;
+        }).join('')
+        : '<div style="color:var(--text-muted)">Kimse yok</div>';
+}
+
+function createRemoteAvatar(color = 0x66ccff) {
+    const group = new THREE.Group();
+    const skin = 0xf1c7a1;
+    const shirt = color;
+    const pants = 0x24344f;
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 0.6), new THREE.MeshStandardMaterial({ color: shirt }));
+    body.position.y = 1.35;
+    body.castShadow = true;
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshStandardMaterial({ color: skin }));
+    head.position.y = 2.18;
+    head.castShadow = true;
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
+    eye1.position.set(-0.13, 2.2, 0.34);
+    eye2.position.set(0.13, 2.2, 0.34);
+
+    const armGeo = new THREE.BoxGeometry(0.14, 0.78, 0.14);
+    const armMat = new THREE.MeshStandardMaterial({ color: skin });
+    const armL = new THREE.Mesh(armGeo, armMat);
+    const armR = new THREE.Mesh(armGeo, armMat);
+    armL.position.set(-0.58, 1.5, 0);
+    armR.position.set(0.58, 1.5, 0);
+    armL.rotation.z = 0.12;
+    armR.rotation.z = -0.12;
+
+    const legGeo = new THREE.BoxGeometry(0.18, 0.92, 0.18);
+    const legMat = new THREE.MeshStandardMaterial({ color: pants });
+    const legL = new THREE.Mesh(legGeo, legMat);
+    const legR = new THREE.Mesh(legGeo, legMat);
+    legL.position.set(-0.22, 0.42, 0);
+    legR.position.set(0.22, 0.42, 0);
+
+    group.add(body, head, eye1, eye2, armL, armR, legL, legR);
+    group.userData.parts = { body, head, armL, armR, legL, legR };
+    return group;
+}
+
+function makeNameTag(text, color = '#ffffff') {
+    const tag = document.createElement('div');
+    tag.className = 'npc-speech';
+    tag.textContent = text;
+    tag.style.color = color;
+    tag.style.fontWeight = '700';
+    tag.style.padding = '5px 10px';
+    tag.style.fontSize = '12px';
+    tag.style.opacity = '1';
+    speechLayer.appendChild(tag);
+    return tag;
+}
+
+function positionTagForObject(tag, object3D, offsetY = 2.5) {
+    if (!tag || !camera) return;
+    const worldPos = new THREE.Vector3();
+    object3D.getWorldPosition(worldPos);
+    const screenPos = worldPos.clone().add(new THREE.Vector3(0, offsetY, 0)).project(camera);
+    const visible = screenPos.z < 1;
+    tag.style.display = visible ? 'block' : 'none';
+    if (!visible) return;
+    tag.style.left = `${(screenPos.x * 0.5 + 0.5) * window.innerWidth}px`;
+    tag.style.top = `${(-screenPos.y * 0.5 + 0.5) * window.innerHeight}px`;
+}
+
+function cleanupMultiplayer() {
+    try {
+        if (meRef) {
+            meRef.remove();
+        }
+    } catch (e) {}
+    try {
+        if (playersRef) {
+            playersRef.off();
+        }
+    } catch (e) {}
+    remotePlayers.forEach(entry => {
+        if (entry.label) entry.label.remove();
+    });
+    remotePlayers.clear();
+    firebaseReady = false;
+    fbApp = null;
+    fbDb = null;
+    playersRef = null;
+    meRef = null;
+    setNetworkStatus('Bağlantı kapatıldı');
+}
+
+function initMultiplayer() {
+    if (firebaseReady) return;
+    try {
+        fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+        fbDb = firebase.database();
+        playersRef = fbDb.ref(`rooms/${roomId}/players`);
+        meRef = playersRef.child(playerId);
+
+        meRef.onDisconnect().remove();
+        meRef.set({
+            name: playerName,
+            x: player.position.x,
+            y: player.position.y,
+            z: player.position.z,
+            yaw: player.rotation.y,
+            color: '#ff3366',
+            fartAt: 0,
+            updatedAt: Date.now()
+        });
+
+        playersRef.on('value', snap => {
+            const data = snap.val() || {};
+            syncRemotePlayers(data);
+            refreshPlayerHud(data);
+            const count = Object.keys(data).length;
+            setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • Oda: <strong>${roomId}</strong>`);
+        });
+
+        firebaseReady = true;
+        setNetworkStatus('Çevrim içi: <strong>1</strong> kişi • Oda: <strong>main</strong>');
+        addLog('Firebase çok oyunculu mod başlatıldı.');
+    } catch (err) {
+        console.warn('Firebase multiplayer failed:', err);
+        setNetworkStatus('Çevrim içi bağlantı kurulamadı');
+        addLog('Firebase bağlantısı kurulamadı, yerel modda devam ediliyor.');
+    }
+}
+
+function syncRemotePlayers(players) {
+    const seen = new Set();
+    for (const [id, p] of Object.entries(players)) {
+        if (id === playerId) continue;
+        seen.add(id);
+
+        let entry = remotePlayers.get(id);
+        if (!entry) {
+            const color = typeof p.color === 'string' ? p.color : '#66ccff';
+            const group = createRemoteAvatar(color);
+            group.position.set(p.x || 0, p.y || 1, p.z || 0);
+            group.rotation.y = p.yaw || 0;
+            scene.add(group);
+
+            const label = makeNameTag(p.name || 'Oyuncu', color);
+            entry = { group, label, lastFartAt: p.fartAt || 0, color, name: p.name || 'Oyuncu' };
+            remotePlayers.set(id, entry);
+        }
+
+        entry.name = p.name || entry.name || 'Oyuncu';
+        entry.group.position.lerp(new THREE.Vector3(p.x || 0, p.y || 1, p.z || 0), 0.35);
+        entry.group.rotation.y += (((p.yaw || 0) - entry.group.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * 0.25;
+        if (entry.label) entry.label.textContent = entry.name;
+
+        if ((p.fartAt || 0) > (entry.lastFartAt || 0)) {
+            entry.lastFartAt = p.fartAt || 0;
+            triggerFartAt(new THREE.Vector3(p.x || 0, p.y || 1, p.z || 0), true);
+        }
+    }
+
+    for (const [id, entry] of Array.from(remotePlayers.entries())) {
+        if (!seen.has(id)) {
+            if (entry.group && entry.group.parent) entry.group.parent.remove(entry.group);
+            if (entry.label) entry.label.remove();
+            remotePlayers.delete(id);
+        }
+    }
+}
+
+function sendLocalState(force = false) {
+    if (!meRef || !player || !firebaseReady) return;
+    const now = Date.now();
+    if (!force && now - localLastSync < 80) return;
+    localLastSync = now;
+
+    meRef.update({
+        name: playerName,
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
+        yaw: player.rotation.y,
+        color: '#ff3366',
+        updatedAt: now
+    }).catch(() => {});
+}
+
+function sendFartToNetwork() {
+    if (!meRef) return;
+    lastSentFartAt = Date.now();
+    meRef.update({
+        fartAt: lastSentFartAt,
+        x: player.position.x,
+        y: player.position.y,
+        z: player.position.z,
+        yaw: player.rotation.y,
+        updatedAt: lastSentFartAt
+    }).catch(() => {});
+}
+
+function updateRemoteTags() {
+    remotePlayers.forEach(entry => {
+        positionTagForObject(entry.label, entry.group, 2.75);
+    });
+}
+
+function addLog(text) {
+    if (!serverLogs) return;
+    const line = document.createElement('p');
+    line.textContent = text;
+    serverLogs.appendChild(line);
+    serverLogs.scrollTop = serverLogs.scrollHeight;
+}
+
 function joinServer() {
     hubContainer.style.display = 'none';
     gameContainer.style.display = 'block';
@@ -224,6 +561,7 @@ function exitGame() {
     loadingText.style.color = 'var(--accent-color)';
     if (speechLayer) speechLayer.innerHTML = '';
     if (mapStatus) mapStatus.classList.remove('show');
+    cleanupMultiplayer();
 }
 
 function createNpcLabel() {
@@ -514,26 +852,36 @@ function updateChunks() {
     }
 }
 
-function fart() {
+function triggerFartAt(origin, remote = false) {
     const now = performance.now();
-    if (now - lastFartAt < 1300) return;
-    lastFartAt = now;
-    showMapStatus('💨 Osurma yayıldı!');
+    if (!remote && now - lastFartAt < 1300) return false;
+    if (!remote) lastFartAt = now;
+
+    showMapStatus(remote ? '💥 Uzak osurma geldi!' : '💨 Osurma yayıldı!');
     for (let i = 0; i < 14; i++) {
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.14 + Math.random() * 0.07, 8, 8),
             new THREE.MeshStandardMaterial({ color: 0xd6d6d6, transparent: true, opacity: 0.75 })
         );
-        mesh.position.set(player.position.x + (Math.random() - 0.5) * 0.8, player.position.y + 0.8 + Math.random() * 0.4, player.position.z + (Math.random() - 0.5) * 0.8);
+        mesh.position.set(origin.x + (Math.random() - 0.5) * 0.8, origin.y + 0.8 + Math.random() * 0.4, origin.z + (Math.random() - 0.5) * 0.8);
         scene.add(mesh);
         fartParticles.push({ mesh, vx:(Math.random()-0.5)*0.08, vy:0.02+Math.random()*0.06, vz:(Math.random()-0.5)*0.08, life:60 + Math.floor(Math.random()*30) });
     }
+
     npcs.forEach(npc => {
         const npcPos = new THREE.Vector3();
         npc.mesh.getWorldPosition(npcPos);
-        if (npcPos.distanceTo(player.position) < 10) npc.speechUntil = now + 2000;
+        if (npcPos.distanceTo(origin) < 10) npc.speechUntil = now + 2000;
     });
-    destroyNearbyObjects(9.5);
+
+    destroyNearbyObjects(9.5, origin);
+    return true;
+}
+
+function fart() {
+    const origin = player.position.clone();
+    if (!triggerFartAt(origin, false)) return;
+    sendFartToNetwork();
 }
 
 function buildPlayer() {
@@ -606,8 +954,31 @@ function startGameEngine() {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
     scene.add(ambientLight);
 
+    const sun = new THREE.Mesh(
+        new THREE.SphereGeometry(2.1, 20, 20),
+        new THREE.MeshBasicMaterial({ color: 0xfff3c4 })
+    );
+    sun.position.set(28, 32, -28);
+    scene.add(sun);
+
+    for (let i = 0; i < 8; i++) {
+        const cloud = new THREE.Group();
+        const puffCount = 3 + (i % 3);
+        for (let j = 0; j < puffCount; j++) {
+            const puff = new THREE.Mesh(
+                new THREE.SphereGeometry(1.1 + Math.random() * 0.7, 10, 10),
+                new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.72 })
+            );
+            puff.position.set(j * 1.1, Math.random() * 0.4, Math.random() * 0.4);
+            cloud.add(puff);
+        }
+        cloud.position.set(-40 + i * 14, 25 + Math.random() * 8, -60 + (i % 2) * 18);
+        scene.add(cloud);
+    }
+
     buildPlayer();
     updateChunks();
+    initMultiplayer();
     if (!startGameEngine._resizeBound) { window.addEventListener('resize', onWindowResize, false); startGameEngine._resizeBound = true; }
     animate();
 }
@@ -625,12 +996,64 @@ function wireHoldButton(button, key) {
     button.addEventListener('pointerleave', () => setMoveState(key, false));
     button.addEventListener('pointercancel', () => setMoveState(key, false));
 }
+
+function setupJoystick() {
+    const base = document.getElementById('joystick-base');
+    const stick = document.getElementById('joystick-stick');
+    if (!base || !stick) return;
+
+    const radius = 48;
+
+    const resetStick = () => {
+        joystickActive = false;
+        joystickPointerId = null;
+        joystickX = 0;
+        joystickY = 0;
+        stick.style.transform = 'translate(-50%, -50%)';
+    };
+
+    base.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        joystickActive = true;
+        joystickPointerId = e.pointerId;
+        base.setPointerCapture(e.pointerId);
+        const rect = base.getBoundingClientRect();
+        joystickCenter = { x: rect.width / 2, y: rect.height / 2 };
+        moveJoystickToEvent(e, rect, radius, stick);
+    });
+
+    base.addEventListener('pointermove', (e) => {
+        if (!joystickActive || e.pointerId !== joystickPointerId) return;
+        const rect = base.getBoundingClientRect();
+        moveJoystickToEvent(e, rect, radius, stick);
+    });
+
+    base.addEventListener('pointerup', resetStick);
+    base.addEventListener('pointercancel', resetStick);
+    base.addEventListener('lostpointercapture', resetStick);
+
+    function moveJoystickToEvent(e, rect, maxRadius, stickEl) {
+        const dx = e.clientX - (rect.left + rect.width / 2);
+        const dy = e.clientY - (rect.top + rect.height / 2);
+        const len = Math.hypot(dx, dy);
+        const clamped = Math.min(maxRadius, len);
+        const nx = len > 0 ? dx / len : 0;
+        const ny = len > 0 ? dy / len : 0;
+
+        joystickX = (clamped / maxRadius) * nx;
+        joystickY = (clamped / maxRadius) * ny;
+
+        stickEl.style.transform = `translate(calc(-50% + ${joystickX * maxRadius}px), calc(-50% + ${joystickY * maxRadius}px))`;
+    }
+}
+
 wireHoldButton(btnFwd, 'forward');
 wireHoldButton(btnBack, 'back');
 wireHoldButton(btnLeft, 'left');
 wireHoldButton(btnRight, 'right');
 if (btnFart) btnFart.addEventListener('pointerdown', e => { e.preventDefault(); fart(); });
 if (btnJmp) btnJmp.addEventListener('pointerdown', e => { e.preventDefault(); if (isGrounded) { velocityY = jumpPower; isGrounded = false; } });
+setupJoystick();
 
 document.addEventListener('keydown', e => {
     if (['KeyW','ArrowUp'].includes(e.code)) moveForward = true;
@@ -657,17 +1080,34 @@ function onWindowResize() {
 }
 
 function updateMovement() {
-    const dir = new THREE.Vector3();
-    if (moveForward) dir.z -= 1;
-    if (moveBack) dir.z += 1;
-    if (moveRight) dir.x += 1;
-    if (moveLeft) dir.x -= 1;
+    let inputX = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+    let inputY = (moveForward ? 1 : 0) - (moveBack ? 1 : 0);
 
-    if (dir.lengthSq() > 0) {
-        dir.normalize();
+    if (Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) {
+        inputX += joystickX;
+        inputY -= joystickY;
+    }
+
+    inputX = Math.max(-1, Math.min(1, inputX));
+    inputY = Math.max(-1, Math.min(1, inputY));
+
+    const moveVec = new THREE.Vector3(inputX, 0, -inputY);
+    if (moveVec.lengthSq() > 0) {
+        moveVec.normalize();
         const speed = moveSpeed * (isRunning ? runMultiplier : 1);
-        player.position.addScaledVector(dir, speed);
-        player.rotation.y = Math.atan2(dir.x, -dir.z);
+        const yaw = player.rotation.y;
+        const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+        const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+        const worldMove = new THREE.Vector3();
+        worldMove.addScaledVector(right, moveVec.x);
+        worldMove.addScaledVector(forward, -moveVec.z);
+        if (worldMove.lengthSq() > 0) worldMove.normalize();
+
+        player.position.addScaledVector(worldMove, speed);
+
+        const targetYaw = Math.atan2(worldMove.x, -worldMove.z);
+        player.rotation.y += ((((targetYaw - player.rotation.y) + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * 0.25;
+
         if (isGrounded) {
             const bob = Math.sin(performance.now() * 0.02) * 0.06;
             player.position.y = 1 + bob;
@@ -716,6 +1156,7 @@ function updateNpcLabels() {
         npc.label.style.display = visible ? 'block' : 'none';
         if (active) npc.label.textContent = 'ıyy pis koktu';
     });
+    updateRemoteTags();
 }
 
 function updateFartParticles() {
@@ -748,8 +1189,8 @@ function spawnDebris(position, count = 10) {
     }
 }
 
-function destroyNearbyObjects(radius = 9) {
-    const p = player.position.clone();
+function destroyNearbyObjects(radius = 9, origin = null) {
+    const p = origin ? origin.clone() : player.position.clone();
     let destroyedCount = 0;
 
     destructibles.forEach(item => {
@@ -786,6 +1227,20 @@ function animate() {
     updateChunks();
     updateFartParticles();
     updateNpcLabels();
+    sendLocalState();
+
+    // remote avatars: gentle smoothing and motion sync
+    remotePlayers.forEach(entry => {
+        if (!entry.group) return;
+        const parts = entry.group.userData.parts || {};
+        if (parts.body) parts.body.rotation.z = Math.sin(performance.now() * 0.003) * 0.02;
+        if (parts.legL && parts.legR) {
+            const walk = Math.sin(performance.now() * 0.008 + entry.group.position.x) * 0.3;
+            parts.legL.rotation.x = walk * 0.5;
+            parts.legR.rotation.x = -walk * 0.5;
+        }
+        positionTagForObject(entry.label, entry.group, 2.75);
+    });
 
     // camera follow
     const yaw = player.rotation.y;
@@ -795,7 +1250,7 @@ function animate() {
     camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
 
     // player walk animation
-    const walk = (moveForward || moveBack || moveLeft || moveRight) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
+    const walk = (moveForward || moveBack || moveLeft || moveRight || Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
     playerLegs[0].rotation.x = walk * 0.7;
     playerLegs[1].rotation.x = -walk * 0.7;
     playerArms[0].rotation.x = -walk * 0.55;
