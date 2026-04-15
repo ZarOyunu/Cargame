@@ -3,675 +3,886 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>BloxCraft Mobile</title>
+  <title>BloxCraft Minecraft-Style 3D</title>
   <style>
-    :root{
-      --bg:#07111f; --panel:rgba(10,18,32,.78); --panel2:rgba(16,28,48,.92);
-      --text:#eef6ff; --muted:#a9bfd7; --accent:#4bd0ff; --accent2:#7cf28a; --danger:#ff6b6b;
-      --shadow:0 18px 45px rgba(0,0,0,.38); --radius:22px;
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(#a6dbff, #eaf8ff);
+      font-family: Arial, Helvetica, sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(180deg,#0a1730 0%,#17284a 40%,#8bc7ff 100%);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);touch-action:none;}
-    #wrap{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:center}
-    canvas{width:100%;height:100%;display:block}
-    .hud{position:fixed;left:12px;right:12px;top:12px;display:flex;gap:10px;justify-content:space-between;pointer-events:none;z-index:6}
-    .pill{pointer-events:auto;background:var(--panel);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow);border-radius:999px;padding:10px 14px;font-weight:700;font-size:13px}
-    .pill small{display:block;color:var(--muted);font-weight:600;font-size:11px;line-height:1.15}
-    .status{display:flex;gap:8px;align-items:center}
-    .dot{width:10px;height:10px;border-radius:50%;background:#999;box-shadow:0 0 0 4px rgba(255,255,255,.08) inset}
-    .dot.on{background:var(--accent2)}
-    .dot.off{background:var(--danger)}
-    .panel{position:fixed;left:12px;bottom:12px;right:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;z-index:7}
-    .btn{background:var(--panel2);border:1px solid rgba(255,255,255,.09);color:var(--text);box-shadow:var(--shadow);border-radius:18px;padding:14px 12px;font-weight:800;font-size:15px;min-height:54px;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
-    .btn:active{transform:translateY(1px) scale(.99)}
-    .btn.primary{background:linear-gradient(135deg,#2f89ff,#5bd7ff)}
-    .btn.green{background:linear-gradient(135deg,#2ed47a,#8be98b)}
-    .btn.red{background:linear-gradient(135deg,#ff6b6b,#ff8f7a)}
-    .joystick{position:fixed;left:14px;bottom:92px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);box-shadow:var(--shadow);z-index:8;touch-action:none}
-    .stick{position:absolute;left:50%;top:50%;width:58px;height:58px;margin-left:-29px;margin-top:-29px;border-radius:50%;background:rgba(255,255,255,.76);box-shadow:0 10px 25px rgba(0,0,0,.25)}
-    .modal{position:fixed;inset:0;background:rgba(3,8,18,.78);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:12;padding:16px}
-    .card{width:min(560px,100%);background:rgba(12,18,34,.92);border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:var(--shadow);padding:18px}
-    h1{margin:0 0 6px;font-size:28px;line-height:1.1}
-    .sub{margin:0 0 18px;color:var(--muted);font-size:14px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 16px}
-    .char{padding:14px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.08);cursor:pointer;min-height:92px}
-    .char.sel{outline:2px solid var(--accent);box-shadow:0 0 0 6px rgba(75,208,255,.12)}
-    .char .name{font-weight:900;font-size:16px;margin-bottom:4px}
-    .char .meta{color:var(--muted);font-size:12px;line-height:1.35}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .input{flex:1;min-width:150px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text);border-radius:16px;padding:14px 14px;font-size:15px;outline:none}
-    .tog{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:14px}
-    .switch{width:58px;height:34px;border-radius:999px;background:#2e3a50;position:relative;flex:0 0 auto;cursor:pointer}
-    .switch::after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;background:white;transition:.18s ease}
-    .switch.on{background:linear-gradient(135deg,#2ed47a,#8be98b)}
-    .switch.on::after{left:28px}
-    .tiny{font-size:12px;color:var(--muted);line-height:1.45}
-    .hide{display:none !important}
-    .toast{position:fixed;left:50%;bottom:210px;transform:translateX(-50%);background:rgba(0,0,0,.55);padding:10px 14px;border-radius:999px;font-weight:700;font-size:13px;z-index:20;opacity:0;transition:opacity .25s ease}
-    .toast.show{opacity:1}
-    @media (max-width:560px){
-      .grid{grid-template-columns:1fr 1fr}
-      .panel{grid-template-columns:1fr 1fr 1fr}
-      .joystick{width:126px;height:126px}
-      .stick{width:52px;height:52px;margin-left:-26px;margin-top:-26px}
-      h1{font-size:24px}
+    #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+    #startScreen {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      z-index: 30; background: radial-gradient(circle at top, rgba(255,255,255,0.92), rgba(145,205,255,0.96));
     }
+    .card {
+      width: min(980px, 94vw);
+      background: rgba(255,255,255,0.90);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.68);
+      padding: 18px;
+    }
+    .title {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 5vw, 54px);
+      font-weight: 900;
+      color: #144d7b;
+    }
+    .sub { margin: 0 0 16px; color: #31556e; line-height: 1.5; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .char {
+      border: 2px solid transparent; border-radius: 18px; background: linear-gradient(180deg, #ffffff, #eef8ff);
+      padding: 12px; text-align: left; cursor: pointer; display: flex; gap: 12px; align-items: center;
+      width: 100%;
+    }
+    .char.selected { border-color: #2b7cff; box-shadow: 0 0 0 3px rgba(43,124,255,0.14); }
+    .avatar {
+      width: 58px; height: 58px; border-radius: 18px; display: grid; place-items: center;
+      font-size: 30px; font-weight: 900; color: white; flex: 0 0 auto;
+    }
+    .name { font-weight: 800; color: #173d5c; }
+    .desc { font-size: 12px; color: #587086; margin-top: 4px; }
+    .row { display:flex; flex-wrap:wrap; gap: 10px; align-items:center; }
+    .btn {
+      pointer-events: auto; border: 0; border-radius: 14px; padding: 12px 15px; background: #1f79ff;
+      color: white; font-weight: 800; box-shadow: 0 10px 22px rgba(31,121,255,0.25); cursor: pointer;
+    }
+    .btn.secondary { background: #eff6ff; color: #194264; box-shadow: none; border: 1px solid #d7e8ff; }
+    .toggle {
+      display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(0,0,0,0.07); border-radius: 999px; padding: 10px 12px; color: #1f4058; font-weight: 700;
+    }
+    #hud {
+      position: fixed; left: 12px; top: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+      width: min(290px, calc(100vw - 24px));
+    }
+    .hudBox {
+      background: rgba(255,255,255,0.82); border: 1px solid rgba(255,255,255,0.75); border-radius: 16px;
+      padding: 10px 12px; color: #163d58; box-shadow: 0 10px 25px rgba(0,0,0,0.08); font-size: 13px;
+    }
+    .barWrap { margin-top: 8px; background: rgba(0,0,0,0.09); border-radius: 999px; overflow: hidden; height: 12px; }
+    .bar { height: 100%; width: 100%; border-radius: 999px; transition: width .08s linear; }
+    #crosshair {
+      position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin-left: -9px; margin-top: -9px;
+      z-index: 9; pointer-events: none; opacity: .85;
+    }
+    #crosshair:before, #crosshair:after {
+      content: ""; position: absolute; left: 50%; top: 50%; background: rgba(0,0,0,.45); transform: translate(-50%, -50%); border-radius: 2px;
+    }
+    #crosshair:before { width: 18px; height: 2px; }
+    #crosshair:after { width: 2px; height: 18px; }
+    #mobileUI { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+    #joystick {
+      position: absolute; left: 18px; bottom: 18px; width: 128px; height: 128px; border-radius: 50%;
+      background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.25); pointer-events: auto; touch-action: none;
+    }
+    #stick {
+      position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin-left: -26px; margin-top: -26px;
+      border-radius: 50%; background: rgba(255,255,255,0.70); box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    }
+    #buttons {
+      position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; pointer-events: auto;
+    }
+    .action {
+      min-width: 74px; min-height: 54px; border: 0; border-radius: 16px; background: rgba(255,255,255,0.8);
+      color: #143a54; font-weight: 800; box-shadow: 0 8px 18px rgba(0,0,0,0.12); touch-action: manipulation;
+    }
+    .action.primary { background: #1f79ff; color: white; }
+    .action.good { background: #1eaa63; color: white; }
+    .action.warn { background: #ff8b2b; color: white; }
+    .action.danger { background: #ef4444; color: white; }
+    #craftModal {
+      position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(7, 20, 30, 0.50);
+      z-index: 25; pointer-events: auto;
+    }
+    .craftCard {
+      width: min(560px, 94vw); background: rgba(255,255,255,0.95); border-radius: 22px; padding: 18px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+    }
+    .craftItem {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px; border-radius: 14px;
+      background: #f4f9ff; margin-top: 10px;
+    }
+    .tiny { font-size: 12px; color: #5c7486; line-height: 1.4; }
+    #message {
+      position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 15; background: rgba(0,0,0,0.60);
+      color: white; padding: 10px 14px; border-radius: 999px; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity .2s ease;
+      max-width: 86vw; text-align: center;
+    }
+    #hint {
+      position: fixed; right: 12px; top: 12px; z-index: 10; pointer-events: none; background: rgba(255,255,255,0.78);
+      border-radius: 14px; padding: 10px 12px; color: #285067; max-width: 240px; font-size: 12px; line-height: 1.4;
+    }
+    #breakBarWrap {
+      position: fixed;
+      left: 50%;
+      top: calc(50% + 24px);
+      transform: translateX(-50%);
+      width: min(220px, 60vw);
+      height: 10px;
+      background: rgba(0,0,0,0.12);
+      border-radius: 999px;
+      overflow: hidden;
+      z-index: 14;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #breakBar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #ffb347, #ff5f6d);
+      border-radius: 999px;
+    }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } #hint { display: none; } .card { padding: 14px; } }
   </style>
 </head>
 <body>
-<div id="wrap"><canvas id="game"></canvas></div>
+  <canvas id="game"></canvas>
 
-<div class="hud">
-  <div class="pill"><small>Harita</small><span id="coords">X: 0 Y: 0</span></div>
-  <div class="pill"><small>Blok</small><span id="blocks">0 / 300+</span></div>
-  <div class="pill status"><span id="netDot" class="dot off"></span><span id="netText">Offline</span></div>
-</div>
-
-<div class="joystick" id="joy"><div class="stick" id="stick"></div></div>
-<div class="panel">
-  <div class="btn" id="leftBtn">◀ Sol</div>
-  <div class="btn green" id="jumpBtn">⤒ Zıpla</div>
-  <div class="btn" id="rightBtn">Sağ ▶</div>
-  <div class="btn primary" id="fastBtn">Hızlı Mod: Açık</div>
-  <div class="btn" id="placeBtn">+ Blok</div>
-  <div class="btn red" id="breakBtn">⛏ Kır</div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<div class="modal" id="startModal">
-  <div class="card">
-    <h1>BloxCraft Mobile</h1>
-    <p class="sub">Minecraft hissi, fizik, telefon için kontroller ve Firebase çok oyunculu oda sistemi.</p>
-    <div class="grid" id="chars">
-      <div class="char sel" data-char="0"><div class="name">Lina</div><div class="meta">Hızlı, çevik, mavi tema</div></div>
-      <div class="char" data-char="1"><div class="name">Mira</div><div class="meta">Zıplaması rahat, pembe tema</div></div>
-      <div class="char" data-char="2"><div class="name">Arda</div><div class="meta">Dengeli, yeşil tema</div></div>
-      <div class="char" data-char="3"><div class="name">Kaan</div><div class="meta">Güçlü his, turuncu tema</div></div>
+  <div id="startScreen">
+    <div class="card">
+      <h1 class="title">BloxCraft 3D Survival</h1>
+      <p class="sub">
+        Minecraft hissine yakın 3D blok dünyası. 1. şahıs / 3. şahıs kamera, doğru yönler, sağlık barı, geniş chunk harita,
+        ağaç kesme, odunu tahtaya çevirme, taş toplama, craft table ve tahta araçlar var.
+      </p>
+      <div class="grid" id="charGrid">
+        <button class="char selected" data-char="0"><div class="avatar" style="background:#f08b8b;">A</div><div><div class="name">Alin</div><div class="desc">Kız • dengeli</div></div></button>
+        <button class="char" data-char="1"><div class="avatar" style="background:#7e87ff;">M</div><div><div class="name">Mira</div><div class="desc">Kız • hızlı</div></div></button>
+        <button class="char" data-char="2"><div class="avatar" style="background:#3da7d8;">K</div><div><div class="name">Kaan</div><div class="desc">Erkek • güçlü</div></div></button>
+        <button class="char" data-char="3"><div class="avatar" style="background:#4cc36b;">E</div><div><div class="name">Efe</div><div class="desc">Erkek • dayanıklı</div></div></button>
+      </div>
+      <div class="row" style="margin-bottom:12px">
+        <label class="toggle"><input type="checkbox" id="fastMode" checked /> Hızlı mod</label>
+        <label class="toggle"><input type="checkbox" id="thirdPerson" checked /> 3. şahıs</label>
+      </div>
+      <div class="row">
+        <button class="btn" id="playBtn">Başla</button>
+        <button class="btn secondary" id="howBtn">Nasıl oynanır?</button>
+      </div>
+      <p class="tiny" style="margin-top:12px">En iyi sonuç için dosyayı <b>Live Server</b> veya <b>localhost</b> ile aç.</p>
     </div>
-    <div class="row">
-      <input class="input" id="nameInput" maxlength="14" placeholder="İsmini yaz" />
-      <input class="input" id="roomInput" maxlength="18" placeholder="Oda kodu: blox1" value="blox1" />
-    </div>
-    <div class="tog"><div id="fastSwitch" class="switch on"></div><div>Hızlı mod açık: daha akıcı hareket ve daha hızlı yükleme</div></div>
-    <div class="row">
-      <button class="btn primary" id="startBtn" style="flex:1">Oyuna Başla</button>
-    </div>
-    <p class="tiny">Multiplayer için Firestore’da <b>rooms</b> koleksiyonu kullanılır. Aynı oda kodunu giren herkes birbirini görür.</p>
   </div>
-</div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
-  import {
-    getFirestore, doc, collection, setDoc, onSnapshot, deleteDoc, serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  <div id="hud">
+    <div class="hudBox" id="statsBox">Yükleniyor...</div>
+    <div class="hudBox" id="invBox">Tahta: 0 • Taş: 0 • Çubuk: 0</div>
+    <div class="hudBox">
+      <div style="font-weight:800; margin-bottom:4px;">Can</div>
+      <div class="barWrap"><div class="bar" id="healthBar"></div></div>
+      <div class="tiny" id="healthText" style="margin-top:6px;">100 / 100</div>
+    </div>
+  </div>
+  <div id="hint">Sol alt joystick ile hareket et. Sağ alt tuşlarla zıpla, kır, kamera değiştir, craft aç.</div>
+  <div id="crosshair"></div>
+  <div id="message"></div>
+  <div id="breakBarWrap"><div id="breakBar"></div></div>
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBRCcRCrk9pPvPUWz0FfsDmX_qhkZUEGreI",
-    authDomain: "bloxcraft-876a5.firebaseapp.com",
-    projectId: "bloxcraft-876a5",
-    storageBucket: "bloxcraft-876a5.firebasestorage.app",
-    messagingSenderId: "222681865370",
-    appId: "1:222681865370:web:ba627b583d7346d5395323",
-    measurementId: "G-GT3F0Z380E"
-  };
+  <div id="craftModal">
+    <div class="craftCard">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px">
+        <div><div style="font-size:22px; font-weight:900; color:#153d5c">Crafting Table</div><div class="tiny">Buradan tahta araçlar yapabilirsin.</div></div>
+        <button class="btn secondary" id="closeCraft">Kapat</button>
+      </div>
+      <div id="craftList"></div>
+    </div>
+  </div>
 
-  let app, db = null;
-  try {
-    app = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch (_) {}
-    db = getFirestore(app);
-  } catch (e) {
-    console.warn('Firebase init failed, offline mode only.', e);
-  }
+  <div id="mobileUI">
+    <div id="joystick"><div id="stick"></div></div>
+    <div id="buttons">
+      <button class="action primary" id="jumpBtn">Zıpla</button>
+      <button class="action danger" id="breakBtn">Kır</button>
+      <button class="action good" id="cameraBtn">1/3</button>
+      <button class="action warn" id="craftBtn">Craft</button>
+    </div>
+  </div>
 
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const coordsEl = document.getElementById('coords');
-  const blocksEl = document.getElementById('blocks');
-  const netDot = document.getElementById('netDot');
-  const netText = document.getElementById('netText');
-  const toast = document.getElementById('toast');
-  const modal = document.getElementById('startModal');
-  const startBtn = document.getElementById('startBtn');
-  const fastBtn = document.getElementById('fastBtn');
-  const fastSwitch = document.getElementById('fastSwitch');
-  const roomInput = document.getElementById('roomInput');
-  const nameInput = document.getElementById('nameInput');
-  const chars = [...document.querySelectorAll('.char')];
-  const joy = document.getElementById('joy');
-  const stick = document.getElementById('stick');
-  const leftBtn = document.getElementById('leftBtn');
-  const rightBtn = document.getElementById('rightBtn');
-  const jumpBtn = document.getElementById('jumpBtn');
-  const placeBtn = document.getElementById('placeBtn');
-  const breakBtn = document.getElementById('breakBtn');
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.159.0/build/three.module.js";
 
-  const CHARSET = [
-    {name:'Lina', shirt:'#4bd0ff', hair:'#2b2d52', skin:'#f6c7a2'},
-    {name:'Mira', shirt:'#ff78b2', hair:'#5b3354', skin:'#f2c9ab'},
-    {name:'Arda', shirt:'#7cf28a', hair:'#3d2f24', skin:'#e8bd97'},
-    {name:'Kaan', shirt:'#ffb05a', hair:'#1f1f1f', skin:'#efc39c'},
-  ];
+    const canvas = document.getElementById("game");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = false;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  const WORLD = {
-    seed: 73.17,
-    blockSize: 32,
-    chunkSize: 16,
-    renderRadius: 26,      // chunks to each side
-    trimBehindBlocks: 300, // user request
-    trimAheadBlocks: 360,
-  };
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0xaad8ff, 28, 220);
 
-  const input = {left:false,right:false,jump:false,place:false,break:false,joyX:0,joyY:0};
-  let fastMode = true;
-  let selectedChar = 0;
-  let started = false;
-  let t = 0;
-  let uid = localStorage.getItem('blox_uid') || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
-  localStorage.setItem('blox_uid', uid);
-  let playerName = '';
-  let roomId = 'blox1';
-  let unsubPlayers = null;
-  let remotePlayers = {};
-  let syncTimer = null;
-  let myDocRef = null;
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 900);
+    const clock = new THREE.Clock();
 
-  const player = {
-    x: 8 * WORLD.blockSize,
-    y: 8 * WORLD.blockSize,
-    w: 22,
-    h: 34,
-    vx: 0,
-    vy: 0,
-    onGround: false,
-    dir: 1,
-    skin: CHARSET[0],
-    blocksPlaced: 0,
-  };
+    const statsBox = document.getElementById("statsBox");
+    const invBox = document.getElementById("invBox");
+    const craftModal = document.getElementById("craftModal");
+    const craftList = document.getElementById("craftList");
+    const message = document.getElementById("message");
+    const healthBar = document.getElementById("healthBar");
+    const healthText = document.getElementById("healthText");
+    const breakBarWrap = document.getElementById("breakBarWrap");
+    const breakBar = document.getElementById("breakBar");
 
-  const camera = {x:0,y:0};
-  const chunks = new Map();
-  const blocks = new Map();
-  const blockCountEl = document.getElementById('blocks');
-  const gravity = 1900;
+    const CHUNK = 16;
+    const VIEW = 2;
+    const SEA = 1;
 
-  function resize(){
-    const dpr = Math.max(1, Math.min(2, devicePixelRatio || 1));
-    canvas.width = Math.floor(innerWidth * dpr);
-    canvas.height = Math.floor(innerHeight * dpr);
-    canvas.style.width = innerWidth + 'px';
-    canvas.style.height = innerHeight + 'px';
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  addEventListener('resize', resize);
-  resize();
+    const state = {
+      selectedChar: 0,
+      cameraMode: "third",
+      yaw: 0,
+      pitch: 0.08,
+      moveX: 0,
+      moveY: 0,
+      joyX: 0,
+      joyY: 0,
+      keyX: 0,
+      keyY: 0,
+      inventory: { wood: 0, plank: 0, stone: 0, stick: 0 },
+      tools: { pickaxe: false, axe: false, shovel: false },
+      health: 100,
+      maxHealth: 100,
+      world: { chunks: new Map(), solid: new Map(), targets: new Map() },
+      player: { x: 0, y: 4, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6 },
+      breakState: { active: false, target: null, progress: 0, time: 0, pointerHeld: false },
+      pointer: { x: 0, y: 0 }
+    };
 
-  function showToast(msg){
-    toast.textContent = msg;
-    toast.classList.add('show');
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(()=>toast.classList.remove('show'), 1500);
-  }
+    const chars = [
+      { name: "Alin", color: 0xf08b8b, speed: 5.6 },
+      { name: "Mira", color: 0x7e87ff, speed: 6.2 },
+      { name: "Kaan", color: 0x3da7d8, speed: 5.4 },
+      { name: "Efe", color: 0x4cc36b, speed: 5.8 }
+    ];
 
-  function hash2(x, y){
-    let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.floor(WORLD.seed * 1000);
-    n = (n ^ (n >>> 13)) * 1274126177;
-    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
-  }
-  function smoothstep(a,b,t){ const u = Math.max(0, Math.min(1,(t-a)/(b-a))); return u*u*(3-2*u); }
-  function terrainHeight(blockX){
-    const base = 11;
-    const wave = Math.sin(blockX * 0.06) * 2.5 + Math.sin(blockX * 0.017) * 5.5;
-    const bumps = (hash2(Math.floor(blockX/8), 0) - 0.5) * 6;
-    return Math.floor(base + wave + bumps);
-  }
-  function key(x,y){ return x + ',' + y; }
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x6ea1c5, 1.25);
+    scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(80, 130, 50);
+    sun.castShadow = false;
+    sun.shadow.mapSize.set(1024, 1024);
+    scene.add(sun);
 
-  function generateChunk(cx){
-    if (chunks.has(cx)) return;
-    const startX = cx * WORLD.chunkSize;
-    for (let lx=0; lx<WORLD.chunkSize; lx++){
-      const bx = startX + lx;
-      const h = terrainHeight(bx);
-      for (let by = h; by < h + 4; by++) addBlock(bx, by, by === h ? 1 : 2);
-      // small floating details
-      if (hash2(bx, 99) > 0.965) addBlock(bx, h - 2, 3);
-      if (hash2(bx, 77) > 0.985) addBlock(bx, h - 3, 4);
+    const playerGroup = new THREE.Group();
+    const playerBody = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.35, 1.05, 4, 8),
+      new THREE.MeshStandardMaterial({ color: chars[0].color, roughness: 0.8 })
+    );
+    playerBody.castShadow = false;
+    playerBody.position.y = 1.2;
+    playerGroup.add(playerBody);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.24, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffd2bf, roughness: 0.9 })
+    );
+    head.position.y = 2.0;
+    head.castShadow = false;
+    playerGroup.add(head);
+    scene.add(playerGroup);
+
+    const eyeHeight = 1.72;
+
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x81c55a, roughness: 1 });
+    const dirtMat = new THREE.MeshStandardMaterial({ color: 0x9b7349, roughness: 1 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8f96, roughness: 1 });
+    const waterMat = new THREE.MeshStandardMaterial({ color: 0x66aaff, transparent: true, opacity: 0.55, roughness: 0.4 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 1 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3d9c4c, roughness: 1 });
+
+    const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
+
+    function hash2(x, z) {
+      let n = x * 374761393 + z * 668265263;
+      n = (n ^ (n >> 13)) * 1274126177;
+      return ((n ^ (n >> 16)) >>> 0) / 4294967295;
     }
-    chunks.set(cx, true);
-  }
 
-  function addBlock(x,y,type=1){ blocks.set(key(x,y), {x,y,type}); }
-  function removeBlock(x,y){ blocks.delete(key(x,y)); }
-  function hasBlock(x,y){ return blocks.has(key(x,y)); }
+    function terrainHeight(x, z) {
+      const n1 = Math.sin(x * 0.08) * 2.1 + Math.cos(z * 0.07) * 2.0;
+      const n2 = Math.sin((x + z) * 0.045) * 1.7;
+      const n3 = Math.cos((x - z) * 0.05) * 1.1;
+      const n4 = (hash2(Math.floor(x), Math.floor(z)) - 0.5) * 1.0;
+      return Math.max(1, Math.floor(4 + n1 + n2 + n3 + n4));
+    }
 
-  function ensureWorldAround(px){
-    const pBlock = Math.floor(px / WORLD.blockSize);
-    const minBlock = pBlock - WORLD.trimBehindBlocks;
-    const maxBlock = pBlock + WORLD.trimAheadBlocks;
-    const minChunk = Math.floor(minBlock / WORLD.chunkSize) - 2;
-    const maxChunk = Math.floor(maxBlock / WORLD.chunkSize) + 2;
-    for (let cx = minChunk; cx <= maxChunk; cx++) generateChunk(cx);
-    for (const [cx] of chunks){
-      const chunkStart = cx * WORLD.chunkSize;
-      const chunkEnd = chunkStart + WORLD.chunkSize - 1;
-      if (chunkEnd < minBlock - WORLD.chunkSize || chunkStart > maxBlock + WORLD.chunkSize){
-        // remove only generated blocks for this chunk
-        for (let lx=0; lx<WORLD.chunkSize; lx++){
-          const bx = chunkStart + lx;
-          for (let by = 0; by < 40; by++) blocks.delete(key(bx, by));
-        }
-        chunks.delete(cx);
+    function addMesh(mat, x, y, z, type, chunkKey) {
+      const mesh = new THREE.Mesh(cubeGeo, mat);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = false;
+      mesh.receiveShadow = false;
+      mesh.userData = { type, x, y, z, chunkKey };
+      scene.add(mesh);
+      state.world.solid.set(`${x},${y},${z}`, mesh);
+      return mesh;
+    }
+
+    function addColumn(x, z, h, chunk) {
+      for (let y = 0; y <= h; y++) {
+        let mat = grassMat;
+        let type = "grass";
+        if (y < h - 2) { mat = stoneMat; type = "stone"; }
+        else if (y < h) { mat = dirtMat; type = "dirt"; }
+        else { mat = grassMat; type = "grass"; }
+        const mesh = addMesh(mat, x, y - 0.5, z, type, chunk.key);
+        chunk.meshes.push(mesh);
       }
-    }
-    blockCountEl.textContent = `${blocks.size} / 300+`;
-  }
-
-  function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
-    return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
-  }
-
-  function collisionMove(dt){
-    const speed = fastMode ? 240 : 180;
-    const accel = fastMode ? 2200 : 1800;
-    const friction = 0.84;
-    const jumpV = fastMode ? 650 : 590;
-
-    let move = 0;
-    if (input.left || input.joyX < -0.25) move -= 1;
-    if (input.right || input.joyX > 0.25) move += 1;
-
-    if (move !== 0){
-      player.vx += move * accel * dt;
-      player.dir = move;
-    } else {
-      player.vx *= Math.pow(friction, dt * 60);
-    }
-    player.vx = Math.max(-speed, Math.min(speed, player.vx));
-
-    if (input.jump && player.onGround){
-      player.vy = -jumpV;
-      player.onGround = false;
-      input.jump = false;
-      showToast('Zıpladın');
-    }
-
-    player.vy += gravity * dt;
-
-    // X axis
-    player.x += player.vx * dt;
-    let minX = Math.floor((player.x - player.w/2) / WORLD.blockSize) - 1;
-    let maxX = Math.floor((player.x + player.w/2) / WORLD.blockSize) + 1;
-    let minY = Math.floor((player.y - player.h) / WORLD.blockSize) - 2;
-    let maxY = Math.floor((player.y + 6) / WORLD.blockSize) + 2;
-    for (let bx=minX; bx<=maxX; bx++) for (let by=minY; by<=maxY; by++){
-      if (!hasBlock(bx,by)) continue;
-      const rx = bx*WORLD.blockSize, ry = by*WORLD.blockSize;
-      if (rectsOverlap(player.x-player.w/2, player.y-player.h, player.w, player.h, rx, ry, WORLD.blockSize, WORLD.blockSize)){
-        if (player.vx > 0) player.x = rx - player.w/2 - 0.1;
-        else if (player.vx < 0) player.x = rx + WORLD.blockSize + player.w/2 + 0.1;
-        player.vx = 0;
+      if (h < SEA) {
+        const water = addMesh(waterMat, x, SEA - 0.5, z, "water", chunk.key);
+        chunk.meshes.push(water);
       }
     }
 
-    // Y axis
-    player.y += player.vy * dt;
-    player.onGround = false;
-    minX = Math.floor((player.x - player.w/2) / WORLD.blockSize) - 1;
-    maxX = Math.floor((player.x + player.w/2) / WORLD.blockSize) + 1;
-    minY = Math.floor((player.y - player.h) / WORLD.blockSize) - 2;
-    maxY = Math.floor((player.y + 12) / WORLD.blockSize) + 2;
-    for (let bx=minX; bx<=maxX; bx++) for (let by=minY; by<=maxY; by++){
-      if (!hasBlock(bx,by)) continue;
-      const rx = bx*WORLD.blockSize, ry = by*WORLD.blockSize;
-      if (rectsOverlap(player.x-player.w/2, player.y-player.h, player.w, player.h, rx, ry, WORLD.blockSize, WORLD.blockSize)){
-        if (player.vy > 0){
-          player.y = ry - 0.1;
-          player.vy = 0;
-          player.onGround = true;
-        } else if (player.vy < 0){
-          player.y = ry + WORLD.blockSize + player.h + 0.1;
-          player.vy = 0;
+    function addTree(x, z, groundY, chunk) {
+      const trunkH = 4 + Math.floor(hash2(x, z) * 3);
+      const trunkLean = hash2(z, x) > 0.72 ? 1 : 0;
+      for (let i = 1; i <= trunkH; i++) {
+        chunk.meshes.push(addMesh(woodMat, x + trunkLean, groundY + i, z, "wood", chunk.key));
+      }
+      const crownY = groundY + trunkH + 1;
+      const leafSets = [
+        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0]],
+        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1]],
+        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1],[0,2,0]]
+      ];
+      const offsets = leafSets[Math.floor(hash2(x * 7, z * 7) * leafSets.length)];
+      for (const [dx, dy, dz] of offsets) {
+        chunk.meshes.push(addMesh(leafMat, x + dx + trunkLean, crownY + dy, z + dz, "leaf", chunk.key));
+      }
+    }
+
+    function addCraftTable(x, z, groundY) {
+      const group = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: 0x7b4f2e, roughness: 1 }));
+      base.position.y = 0.3;
+      base.castShadow = true; base.receiveShadow = true;
+      group.add(base);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.18, 1.05), new THREE.MeshStandardMaterial({ color: 0xb47a4f, roughness: 1 }));
+      top.position.y = 0.69;
+      top.castShadow = true; top.receiveShadow = true;
+      group.add(top);
+      group.position.set(x, groundY + 0.1, z);
+      group.userData = { type: "craftTable", x, z, y: groundY };
+      scene.add(group);
+      return group;
+    }
+
+    function chunkKey(cx, cz) { return `${cx},${cz}`; }
+    function worldToChunk(n) { return Math.floor(n / CHUNK); }
+
+    function generateChunk(cx, cz) {
+      const key = chunkKey(cx, cz);
+      if (state.world.chunks.has(key)) return state.world.chunks.get(key);
+
+      const chunk = { key, meshes: [], x: cx, z: cz };
+      const baseX = cx * CHUNK;
+      const baseZ = cz * CHUNK;
+
+      for (let lx = 0; lx < CHUNK; lx++) {
+        for (let lz = 0; lz < CHUNK; lz++) {
+          const x = baseX + lx;
+          const z = baseZ + lz;
+          const h = terrainHeight(x, z);
+          addColumn(x, z, h, chunk);
+
+          const treeRoll = hash2(x * 3, z * 3);
+          const rockyArea = h <= 4;
+          const treeChance = rockyArea ? 0.02 : 0.075;
+          if (treeRoll > 1 - treeChance && h >= 2) {
+            addTree(x, z, h - 0.5, chunk);
+          }
+
+          if (hash2(x * 11, z * 13) > 0.995 && h >= 2) {
+            chunk.meshes.push(addMesh(stoneMat, x, h + 0.5, z, "stone", chunk.key));
+          }
         }
       }
+
+      state.world.chunks.set(key, chunk);
+      return chunk;
     }
 
-    // fall reset
-    if (player.y > 1800){
-      player.x = 8 * WORLD.blockSize;
-      player.y = 8 * WORLD.blockSize;
-      player.vx = player.vy = 0;
-      showToast('Yeniden doğdun');
+    function unloadChunk(key) {
+      const chunk = state.world.chunks.get(key);
+      if (!chunk) return;
+      for (const mesh of chunk.meshes) {
+        scene.remove(mesh);
+      }
+      state.world.chunks.delete(key);
     }
-  }
 
-  function drawBlock(bx, by, type){
-    const x = bx * WORLD.blockSize - camera.x;
-    const y = by * WORLD.blockSize - camera.y;
-    const s = WORLD.blockSize;
-    if (x < -s || y < -s || x > innerWidth + s || y > innerHeight + s) return;
-    const palette = [
-      ['#7ed957','#5ea83a','#86f06e'],
-      ['#8a6f4f','#6b5238','#a27d59'],
-      ['#86d6ff','#4fa2d9','#c8f4ff'],
-      ['#b18cff','#7b57c6','#d2c1ff'],
-      ['#ffb35d','#db7b2d','#ffd09a'],
-    ][(type-1) % 5];
-    ctx.fillStyle = palette[1];
-    ctx.fillRect(x, y, s, s);
-    ctx.fillStyle = palette[2];
-    ctx.fillRect(x, y, s, 5);
-    ctx.fillStyle = palette[0];
-    ctx.fillRect(x, y, 5, s);
-    ctx.strokeStyle = 'rgba(0,0,0,.15)';
-    ctx.strokeRect(x+.5, y+.5, s-1, s-1);
-  }
+    function updateChunkStreaming() {
+      const pcx = worldToChunk(state.player.x);
+      const pcz = worldToChunk(state.player.z);
+      const keep = new Set();
 
-  function drawSky(){
-    const g = ctx.createLinearGradient(0,0,0,innerHeight);
-    g.addColorStop(0,'#78c7ff');
-    g.addColorStop(.55,'#a8dcff');
-    g.addColorStop(1,'#e7f7ff');
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,innerWidth,innerHeight);
-    // sun
-    ctx.beginPath();
-    ctx.arc(innerWidth*0.82, innerHeight*0.16, 34, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,245,170,.9)';
-    ctx.fill();
-    // clouds
-    const cx = (camera.x * .08) % (innerWidth + 280) - 120;
-    ctx.fillStyle = 'rgba(255,255,255,.55)';
-    for (let i=0;i<4;i++){
-      const x = (cx + i*220) % (innerWidth + 280) - 120;
-      const y = 60 + (i%2)*38;
-      ctx.beginPath();
-      ctx.ellipse(x, y, 42, 22, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(x+34, y-10, 30, 18, 0, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(x+58, y, 38, 20, 0, 0, Math.PI*2); ctx.fill();
-    }
-  }
+      for (let dx = -VIEW; dx <= VIEW; dx++) {
+        for (let dz = -VIEW; dz <= VIEW; dz++) {
+          const key = chunkKey(pcx + dx, pcz + dz);
+          keep.add(key);
+          if (!state.world.chunks.has(key)) generateChunk(pcx + dx, pcz + dz);
+        }
+      }
 
-  function drawPlayer(px, py, skin, name, isRemote=false){
-    const x = px - camera.x;
-    const y = py - camera.y;
-    const w = 22, h = 34;
-    const shirt = skin.shirt || '#4bd0ff';
-    const hair = skin.hair || '#2b2d52';
-    const face = skin.skin || '#f6c7a2';
-    const dir = isRemote ? (skin.dir || 1) : player.dir;
-    const flip = dir < 0;
-    const ox = flip ? x - w : x;
-    const mapX = (dx, dw) => flip ? ox + (w - dx - dw) : ox + dx;
-
-    ctx.fillStyle = 'rgba(0,0,0,.22)';
-    ctx.beginPath(); ctx.ellipse(x+11, y+h+4, 18, 6, 0, 0, Math.PI*2); ctx.fill();
-
-    const r = (dx, dy, dw, dh, color) => { ctx.fillStyle = color; ctx.fillRect(mapX(dx, dw), y + dy, dw, dh); };
-
-    r(6, 22, 6, 12, '#304e6a');
-    r(14, 22, 6, 12, '#304e6a');
-    r(4, 12, 18, 14, shirt);
-    r(4, 12, 18, 3, '#1c2230');
-    r(1, 13, 4, 12, face); r(21, 13, 4, 12, face);
-    r(5, 0, 14, 13, face);
-    r(4, 0, 16, 4, hair);
-    r(4, 3, 4, 5, hair);
-    r(16, 3, 4, 5, hair);
-    r(8, 6, 2, 2, '#15202d'); r(14, 6, 2, 2, '#15202d');
-    r(8, 6, 1, 1, 'rgba(255,255,255,.85)'); r(14, 6, 1, 1, 'rgba(255,255,255,.85)');
-
-    ctx.font = '700 11px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(0,0,0,.38)';
-    ctx.fillText(name, x+11, y-8);
-    ctx.fillStyle = 'white';
-    ctx.fillText(name, x+11, y-9);
-  }
-
-  function draw(){
-    drawSky();
-    const startBlockX = Math.floor((camera.x - 2*WORLD.blockSize) / WORLD.blockSize);
-    const endBlockX = Math.floor((camera.x + innerWidth + 2*WORLD.blockSize) / WORLD.blockSize);
-    const startBlockY = Math.floor((camera.y - 2*WORLD.blockSize) / WORLD.blockSize);
-    const endBlockY = Math.floor((camera.y + innerHeight + 2*WORLD.blockSize) / WORLD.blockSize);
-
-    // blocks
-    for (let bx=startBlockX; bx<=endBlockX; bx++){
-      for (let by=startBlockY; by<=endBlockY; by++){
-        const b = blocks.get(key(bx,by));
-        if (b) drawBlock(b.x,b.y,b.type);
+      for (const key of [...state.world.chunks.keys()]) {
+        if (!keep.has(key)) unloadChunk(key);
       }
     }
 
-    // remote players first
-    for (const p of Object.values(remotePlayers)){
-      const sx = p.x - camera.x;
-      const sy = p.y - camera.y;
-      if (sx < -100 || sy < -100 || sx > innerWidth + 100 || sy > innerHeight + 100) continue;
-      drawPlayer(p.x,p.y,CHARSET[p.char] || CHARSET[0], p.name || 'Player', true);
+    function getGroundHeight(x, z) {
+      return terrainHeight(Math.floor(x + 0.5), Math.floor(z + 0.5)) + 0.5;
     }
 
-    drawPlayer(player.x, player.y, player.skin, playerName || 'Sen', false);
-
-    // vignette
-    const vg = ctx.createRadialGradient(innerWidth/2, innerHeight/2, innerHeight/4, innerWidth/2, innerHeight/2, innerHeight);
-    vg.addColorStop(0,'rgba(255,255,255,0)');
-    vg.addColorStop(1,'rgba(0,0,0,.14)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0,0,innerWidth,innerHeight);
-  }
-
-  function updateCamera(){
-    camera.x = player.x - innerWidth / 2;
-    camera.y = player.y - innerHeight * 0.58;
-    if (camera.y < 0) camera.y = 0;
-  }
-
-  function tryMine(){
-    const bx = Math.floor(player.x / WORLD.blockSize) + player.dir;
-    const by = Math.floor((player.y - player.h/2) / WORLD.blockSize);
-    for (let yy=by-1; yy<=by+1; yy++){
-      if (hasBlock(bx,yy)) { removeBlock(bx,yy); player.blocksPlaced = Math.max(0, player.blocksPlaced-1); showToast('Blok kırıldı'); return; }
+    function getTargetRay() {
+      const origin = new THREE.Vector3();
+      camera.getWorldPosition(origin);
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      const ray = new THREE.Raycaster(origin, dir, 0.4, 6);
+      const hits = ray.intersectObjects(scene.children, true);
+      for (const hit of hits) {
+        const obj = hit.object;
+        if (obj.userData?.type) return { object: obj, distance: hit.distance };
+        if (obj.parent?.userData?.type) return { object: obj.parent, distance: hit.distance };
+      }
+      return null;
     }
-    showToast('Kırılacak blok yok');
-  }
-  function tryPlace(){
-    const bx = Math.floor(player.x / WORLD.blockSize) + player.dir;
-    const by = Math.floor((player.y + 8) / WORLD.blockSize);
-    const below = by + 1;
-    if (!hasBlock(bx, by) && !hasBlock(bx, below)){
-      addBlock(bx, by, 2);
-      player.blocksPlaced++;
-      showToast('Blok eklendi');
-    } else {
-      showToast('Orası dolu');
+
+    function showMsg(txt, ms = 1200) {
+      message.textContent = txt;
+      message.style.opacity = 1;
+      clearTimeout(showMsg.t);
+      showMsg.t = setTimeout(() => message.style.opacity = 0, ms);
     }
-  }
 
-  // input
-  function bindHold(el, onDown, onUp){
-    const down = (e)=>{ e.preventDefault(); onDown(); };
-    const up = (e)=>{ e.preventDefault(); onUp(); };
-    el.addEventListener('pointerdown', down, {passive:false});
-    addEventListener('pointerup', up, {passive:false});
-    addEventListener('pointercancel', up, {passive:false});
-  }
-
-  bindHold(leftBtn, ()=>input.left=true, ()=>input.left=false);
-  bindHold(rightBtn, ()=>input.right=true, ()=>input.right=false);
-  bindHold(jumpBtn, ()=>input.jump=true, ()=>{});
-  bindHold(placeBtn, ()=>tryPlace(), ()=>{});
-  bindHold(breakBtn, ()=>tryMine(), ()=>{});
-
-  let joyId = null;
-  let joyCenter = {x:0,y:0};
-  joy.addEventListener('pointerdown', (e)=>{
-    joyId = e.pointerId;
-    joy.setPointerCapture(joyId);
-    const r = joy.getBoundingClientRect();
-    joyCenter = {x:r.left+r.width/2, y:r.top+r.height/2};
-    moveJoy(e.clientX, e.clientY);
-  });
-  addEventListener('pointermove', (e)=>{
-    if (joyId === e.pointerId) moveJoy(e.clientX, e.clientY);
-  });
-  addEventListener('pointerup', (e)=>{
-    if (joyId === e.pointerId){
-      joyId = null; input.joyX = 0; input.joyY = 0; stick.style.transform = 'translate(0px, 0px)';
+    function updateHud() {
+      const mode = state.cameraMode === "third" ? "3. şahıs" : "1. şahıs";
+      statsBox.innerHTML = `Mod: <b>${mode}</b><br>Karakter: <b>${chars[state.selectedChar].name}</b><br>Hız: <b>${state.player.speed.toFixed(1)}</b>`;
+      invBox.innerHTML = `Odun: <b>${state.inventory.wood}</b> • Tahta: <b>${state.inventory.plank}</b> • Taş: <b>${state.inventory.stone}</b> • Çubuk: <b>${state.inventory.stick}</b><br>Aletler: ${state.tools.pickaxe ? "Kazma " : ""}${state.tools.axe ? "Balta " : ""}${state.tools.shovel ? "Kürek" : ""}`;
+      healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
+      healthBar.style.background = state.health > 60 ? "linear-gradient(90deg,#22c55e,#86efac)" : state.health > 30 ? "linear-gradient(90deg,#f59e0b,#fde68a)" : "linear-gradient(90deg,#ef4444,#fb7185)";
+      healthText.textContent = `${Math.max(0, Math.floor(state.health))} / ${state.maxHealth}`;
     }
-  });
-  function moveJoy(x,y){
-    const dx = x - joyCenter.x, dy = y - joyCenter.y;
-    const max = 38;
-    const len = Math.hypot(dx,dy) || 1;
-    const cl = Math.min(max, len);
-    const nx = dx / len, ny = dy / len;
-    input.joyX = (cl/max) * nx;
-    input.joyY = (cl/max) * ny;
-    stick.style.transform = `translate(${nx*cl}px, ${ny*cl}px)`;
-  }
 
-  addEventListener('keydown', (e)=>{
-    if (e.key === 'ArrowLeft' || e.key === 'a') input.left = true;
-    if (e.key === 'ArrowRight' || e.key === 'd') input.right = true;
-    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') input.jump = true;
-    if (e.key === 'e') tryPlace();
-    if (e.key === 'q') tryMine();
-    if (e.key === 'f') toggleFast();
-  });
-  addEventListener('keyup', (e)=>{
-    if (e.key === 'ArrowLeft' || e.key === 'a') input.left = false;
-    if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
-  });
-
-  function toggleFast(){
-    fastMode = !fastMode;
-    fastSwitch.classList.toggle('on', fastMode);
-    fastBtn.textContent = `Hızlı Mod: ${fastMode ? 'Açık' : 'Kapalı'}`;
-    showToast(fastMode ? 'Hızlı mod açıldı' : 'Hızlı mod kapandı');
-  }
-  fastBtn.addEventListener('click', toggleFast);
-  fastSwitch.addEventListener('click', toggleFast);
-
-  chars.forEach(el => el.addEventListener('click', ()=>{
-    chars.forEach(c=>c.classList.remove('sel'));
-    el.classList.add('sel');
-    selectedChar = Number(el.dataset.char);
-    player.skin = CHARSET[selectedChar];
-  }));
-
-  function updateHUD(){
-    coordsEl.textContent = `X: ${Math.floor(player.x / WORLD.blockSize)} Y: ${Math.floor(player.y / WORLD.blockSize)}`;
-  }
-
-  function setNet(state, text){
-    netDot.classList.toggle('on', state);
-    netDot.classList.toggle('off', !state);
-    netText.textContent = text;
-  }
-
-  async function startMultiplayer(){
-    if (!db) { setNet(false, 'Offline'); return; }
-    try {
-      const room = roomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,18) || 'blox1';
-      const playersCol = collection(db, 'rooms', room, 'players');
-      myDocRef = doc(playersCol, uid);
-      await setDoc(myDocRef, {
-        name: playerName,
-        char: selectedChar,
-        x: player.x,
-        y: player.y,
-        dir: player.dir,
-        skin: player.skin,
-        fast: fastMode,
-        t: Date.now(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      setNet(true, `Oda: ${room}`);
-      unsubPlayers = onSnapshot(playersCol, (snap)=>{
-        const next = {};
-        const now = Date.now();
-        snap.forEach(d => {
-          const p = d.data();
-          if (d.id === uid) return;
-          if (!p || !p.t || now - p.t > 15000) return;
-          next[d.id] = p;
-        });
-        remotePlayers = next;
-        if (Object.keys(remotePlayers).length === 0) setNet(true, `Oda: ${room} (yalnız)`);
-        else setNet(true, `Oda: ${room} | ${Object.keys(remotePlayers).length} kişi`);
-      }, ()=>setNet(false, 'Bağlantı yok'));
-      syncTimer = setInterval(async ()=>{
-        if (!myDocRef) return;
-        try {
-          await setDoc(myDocRef, {
-            name: playerName,
-            char: selectedChar,
-            x: player.x,
-            y: player.y,
-            dir: player.dir,
-            skin: player.skin,
-            fast: fastMode,
-            t: Date.now(),
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        } catch (_) {}
-      }, 250);
-      addEventListener('beforeunload', cleanup, {once:true});
-    } catch (e) {
-      console.warn(e);
-      setNet(false, 'Firebase hata');
+    function applyCharacter(index) {
+      state.selectedChar = index;
+      state.player.speed = chars[index].speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
+      playerBody.material.color.setHex(chars[index].color);
+      updateHud();
     }
-  }
 
-  async function cleanup(){
-    if (syncTimer) clearInterval(syncTimer);
-    syncTimer = null;
-    if (unsubPlayers) unsubPlayers();
-    unsubPlayers = null;
-    try { if (myDocRef) await deleteDoc(myDocRef); } catch(_) {}
-  }
+    function renderCraftList() {
+      const recipes = [
+        { name: "Odunu Tahtaya Çevir", need: { wood: 1 }, out: { plank: 4 }, note: "Ağaçtan çıkan odunu işlenmiş tahtaya dönüştür." },
+        { name: "Çubuk", need: { plank: 2 }, out: { stick: 4 }, note: "Araçların temel malzemesi." },
+        { name: "Tahta Kazma", need: { plank: 3, stick: 2 }, out: { tool: "pickaxe" }, note: "Taş kırmak için daha iyi." },
+        { name: "Tahta Balta", need: { plank: 3, stick: 2 }, out: { tool: "axe" }, note: "Ağaç kesmeyi hızlandırır." },
+        { name: "Tahta Kürek", need: { plank: 2, stick: 1 }, out: { tool: "shovel" }, note: "Toprak işleri için." }
+      ];
+      craftList.innerHTML = "";
+      recipes.forEach((r) => {
+        const row = document.createElement("div");
+        row.className = "craftItem";
+        row.innerHTML = `<div><div style="font-weight:800;color:#173d5c">${r.name}</div><div class="tiny">${Object.entries(r.need).map(([k, v]) => `${k}: ${v}`).join(" • ")}<br>${r.note}</div></div>`;
+        const btn = document.createElement("button");
+        btn.className = "btn";
+        btn.textContent = "Yap";
+        btn.onclick = () => craft(r);
+        row.appendChild(btn);
+        craftList.appendChild(row);
+      });
+    }
 
-  startBtn.addEventListener('click', async ()=>{
-    playerName = (nameInput.value.trim() || 'Oyuncu').slice(0,14);
-    roomId = roomInput.value.trim() || 'blox1';
-    player.skin = CHARSET[selectedChar];
-    player.x = 8 * WORLD.blockSize;
-    player.y = 8 * WORLD.blockSize;
-    modal.classList.add('hide');
-    started = true;
-    ensureWorldAround(player.x);
-    await startMultiplayer();
-    showToast('Başladı');
-  });
+    function hasMaterials(req) {
+      for (const [k, v] of Object.entries(req)) if ((state.inventory[k] || 0) < v) return false;
+      return true;
+    }
 
-  // initial world
-  ensureWorldAround(player.x);
+    function spendMaterials(req) {
+      for (const [k, v] of Object.entries(req)) state.inventory[k] -= v;
+    }
 
-  let last = performance.now();
-  function frame(now){
-    const dt = Math.min(0.033, (now - last) / 1000);
-    last = now;
-    if (started){
-      t += dt;
-      ensureWorldAround(player.x);
-      collisionMove(dt);
+    function craft(recipe) {
+      if (!hasMaterials(recipe.need)) return showMsg("Malzeme yetmiyor.");
+      spendMaterials(recipe.need);
+      if (recipe.out.tool) state.tools[recipe.out.tool] = true;
+      if (recipe.out.stick) state.inventory.stick += recipe.out.stick;
+      if (recipe.out.plank) state.inventory.plank += recipe.out.plank;
+      updateHud();
+      renderCraftList();
+      showMsg(`${recipe.name} yapıldı!`);
+    }
+
+    function openCraft() { craftModal.style.display = "flex"; }
+    function closeCraft() { craftModal.style.display = "none"; }
+
+    function damage(amount) {
+      state.health = Math.max(0, state.health - amount);
+      updateHud();
+      showMsg(`Can -${amount}`);
+    }
+
+    function breakTimeFor(type) {
+      const toolBonus = state.tools.pickaxe && type === "stone" ? 0.35 : state.tools.axe && type === "wood" ? 0.40 : 1.0;
+      const base = type === "stone" ? 1.35 : type === "wood" ? 1.0 : type === "leaf" ? 0.35 : 0.7;
+      return base * toolBonus;
+    }
+
+    function startBreaking() {
+      const target = getTargetRay();
+      if (!target) {
+        showMsg("Hedef yok.");
+        return;
+      }
+      const type = target.object.userData?.type;
+      if (!type) return;
+      if (type === "craftTable") {
+        openCraft();
+        return;
+      }
+      state.breakState.active = true;
+      state.breakState.target = target.object;
+      state.breakState.progress = 0;
+      state.breakState.time = breakTimeFor(type);
+      breakBarWrap.style.opacity = 1;
+    }
+
+    function stopBreaking() {
+      state.breakState.active = false;
+      state.breakState.target = null;
+      state.breakState.progress = 0;
+      breakBarWrap.style.opacity = 0;
+      breakBar.style.width = "0%";
+    }
+
+    function interactTap() {
+      const target = getTargetRay();
+      if (!target) return showMsg("Yakında bir şey yok.");
+      if (target.object.userData?.type === "craftTable") return openCraft();
+      const type = target.object.userData?.type;
+      if (type === "wood" || type === "stone" || type === "leaf" || type === "grass" || type === "dirt") {
+        state.breakState.target = target.object;
+        state.breakState.time = breakTimeFor(type);
+        state.breakState.progress = 1;
+        removeObject(target.object);
+        showMsg(type === "wood" ? "Ağaç toplandı." : "Blok kırıldı.");
+      }
+    }
+
+    function jump() {
+      if (state.player.onGround) {
+        state.player.vy = 7.1;
+        state.player.onGround = false;
+      }
+    }
+
+    function toggleCamera() {
+      state.cameraMode = state.cameraMode === "third" ? "first" : "third";
+      document.getElementById("thirdPerson").checked = state.cameraMode === "third";
+      updateHud();
+      showMsg(state.cameraMode === "third" ? "3. şahıs kamera" : "1. şahıs kamera");
+    }
+
+    document.getElementById("playBtn").onclick = () => {
+      applyCharacter(state.selectedChar);
+      state.cameraMode = document.getElementById("thirdPerson").checked ? "third" : "first";
+      document.getElementById("startScreen").style.display = "none";
+      showMsg("Oyuna hoş geldin!");
+      updateHud();
+      renderCraftList();
+      updateChunkStreaming();
+    };
+    document.getElementById("howBtn").onclick = () => showMsg("Ağaç kes, odunu tahtaya çevir, taş topla, craft table aç.");
+    document.getElementById("closeCraft").onclick = closeCraft;
+    document.getElementById("jumpBtn").onclick = jump;
+    document.getElementById("cameraBtn").onclick = toggleCamera;
+    document.getElementById("craftBtn").onclick = openCraft;
+    document.getElementById("breakBtn").addEventListener("pointerdown", () => { state.breakState.pointerHeld = true; startBreaking(); });
+    document.getElementById("breakBtn").addEventListener("pointerup", () => { state.breakState.pointerHeld = false; stopBreaking(); });
+    document.getElementById("breakBtn").addEventListener("pointercancel", () => { state.breakState.pointerHeld = false; stopBreaking(); });
+    document.getElementById("breakBtn").addEventListener("pointerleave", () => { if (state.breakState.pointerHeld) { state.breakState.pointerHeld = false; stopBreaking(); }});
+
+    document.getElementById("charGrid").addEventListener("click", (e) => {
+      const btn = e.target.closest(".char");
+      if (!btn) return;
+      document.querySelectorAll(".char").forEach((x) => x.classList.remove("selected"));
+      btn.classList.add("selected");
+      applyCharacter(Number(btn.dataset.char));
+    });
+
+    document.getElementById("fastMode").addEventListener("change", () => applyCharacter(state.selectedChar));
+    document.getElementById("thirdPerson").addEventListener("change", (e) => {
+      state.cameraMode = e.target.checked ? "third" : "first";
+      updateHud();
+    });
+
+    let joy = { active: false, id: null, cx: 0, cy: 0 };
+    const joystick = document.getElementById("joystick");
+    const stick = document.getElementById("stick");
+
+    joystick.addEventListener("pointerdown", (e) => {
+      joy.active = true;
+      joy.id = e.pointerId;
+      joy.cx = e.clientX;
+      joy.cy = e.clientY;
+      joystick.setPointerCapture(e.pointerId);
+    });
+    joystick.addEventListener("pointermove", (e) => {
+      if (!joy.active || e.pointerId !== joy.id) return;
+      const dx = e.clientX - joy.cx;
+      const dy = e.clientY - joy.cy;
+      const max = 44;
+      const nx = Math.max(-max, Math.min(max, dx));
+      const ny = Math.max(-max, Math.min(max, dy));
+      stick.style.transform = `translate(${nx}px, ${ny}px)`;
+      state.joyX = nx / max;
+      state.joyY = -ny / max;
+    });
+    function endJoy(e) {
+      if (e.pointerId !== joy.id) return;
+      joy.active = false;
+      state.joyX = 0;
+      state.joyY = 0;
+      stick.style.transform = "translate(0px, 0px)";
+      syncMovementInput();
+    }
+    joystick.addEventListener("pointerup", endJoy);
+    joystick.addEventListener("pointercancel", endJoy);
+    joystick.addEventListener("pointerleave", endJoy);
+
+    let drag = null;
+    window.addEventListener("pointerdown", (e) => {
+      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest("#craftModal"))) return;
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!drag || drag.id !== e.pointerId) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      state.yaw -= dx * 0.0042;
+      state.pitch = Math.max(-1.35, Math.min(0.85, state.pitch - dy * 0.0032));
+    });
+    window.addEventListener("pointerup", (e) => { if (drag && drag.id === e.pointerId) drag = null; });
+
+    const keys = {};
+    window.addEventListener("keydown", (e) => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === " ") jump();
+      if (e.key.toLowerCase() === "e") interactTap();
+      if (e.key.toLowerCase() === "c") toggleCamera();
+      if (e.key.toLowerCase() === "f") openCraft();
+      if (e.key.toLowerCase() === "q") startBreaking();
+    });
+    window.addEventListener("keyup", (e) => {
+      keys[e.key.toLowerCase()] = false;
+      if (e.key.toLowerCase() === "q") stopBreaking();
+    });
+
+    function applyKeyboard() {
+      let mx = 0, my = 0;
+      if (keys["w"] || keys["arrowup"]) my += 1;
+      if (keys["s"] || keys["arrowdown"]) my -= 1;
+      if (keys["a"] || keys["arrowleft"]) mx -= 1;
+      if (keys["d"] || keys["arrowright"]) mx += 1;
+      if (mx || my) {
+        const l = Math.hypot(mx, my);
+        state.keyX = mx / l;
+        state.keyY = my / l;
+      } else {
+        state.keyX = 0;
+        state.keyY = 0;
+      }
+    }
+
+    function syncMovementInput() {
+      state.moveX = Math.max(-1, Math.min(1, state.joyX + state.keyX));
+      state.moveY = Math.max(-1, Math.min(1, state.joyY + state.keyY));
+      if (Math.abs(state.moveX) < 0.03) state.moveX = 0;
+      if (Math.abs(state.moveY) < 0.03) state.moveY = 0;
+    }
+
+    function updateMovement(dt) {
+      const yaw = state.yaw;
+      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+      const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+
+      const input = new THREE.Vector3();
+      input.addScaledVector(forward, state.moveY);
+      input.addScaledVector(right, state.moveX);
+
+      const desiredSpeed = state.player.speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
+      if (input.lengthSq() > 0) input.normalize().multiplyScalar(desiredSpeed);
+
+      const accel = state.player.onGround ? 38 : 10;
+      state.player.vx += (input.x - state.player.vx) * Math.min(1, accel * dt);
+      state.player.vz += (input.z - state.player.vz) * Math.min(1, accel * dt);
+
+      if (!state.player.onGround) {
+        state.player.vy -= 18 * dt;
+      } else {
+        state.player.vy = Math.max(state.player.vy, -1.2);
+        const braking = (Math.abs(state.moveX) < 0.03 && Math.abs(state.moveY) < 0.03) ? 18 : 9;
+        state.player.vx *= Math.max(0, 1 - braking * dt);
+        state.player.vz *= Math.max(0, 1 - braking * dt);
+        if (Math.abs(state.player.vx) < 0.01) state.player.vx = 0;
+        if (Math.abs(state.player.vz) < 0.01) state.player.vz = 0;
+      }
+
+      const prevX = state.player.x;
+      const prevZ = state.player.z;
+      const prevY = state.player.y;
+      const prevGround = getGroundHeight(prevX, prevZ);
+
+      state.player.x += state.player.vx * dt;
+      state.player.z += state.player.vz * dt;
+      state.player.y += state.player.vy * dt;
+
+      const ground = getGroundHeight(state.player.x, state.player.z);
+      const groundDrop = prevGround - ground;
+
+      if (state.player.onGround && groundDrop > 0 && groundDrop <= 1.15 && state.player.vy <= 0.2) {
+        state.player.y = ground;
+        state.player.vy = 0;
+        state.player.onGround = true;
+      } else if (state.player.y <= ground) {
+        if (prevY - ground > 2.8) {
+          damage(Math.min(30, Math.round((prevY - ground - 2.2) * 12)));
+        }
+        state.player.y = ground;
+        state.player.vy = 0;
+        state.player.onGround = true;
+      } else {
+        state.player.onGround = false;
+      }
+
+      const worldLimit = 9999;
+      state.player.x = Math.max(-worldLimit, Math.min(worldLimit, state.player.x));
+      state.player.z = Math.max(-worldLimit, Math.min(worldLimit, state.player.z));
+    }
+
+    function updateCamera() {
+      const px = state.player.x;
+      const py = state.player.y + eyeHeight;
+      const pz = state.player.z;
+      const lookX = px + Math.sin(state.yaw) * Math.cos(state.pitch);
+      const lookY = py + Math.sin(state.pitch) * 2.1;
+      const lookZ = pz + Math.cos(state.yaw) * Math.cos(state.pitch);
+
+      if (state.cameraMode === "first") {
+        camera.position.set(px, py, pz);
+        camera.lookAt(lookX, lookY, lookZ);
+        playerGroup.visible = false;
+      } else {
+        playerGroup.visible = true;
+        const dist = 4.8;
+        const desired = new THREE.Vector3(
+          px - Math.sin(state.yaw) * dist,
+          py + 1.7,
+          pz - Math.cos(state.yaw) * dist
+        );
+        camera.position.lerp(desired, 0.14);
+        camera.lookAt(px, py + 0.95, pz);
+      }
+    }
+
+    function updatePlayerVisual() {
+      playerGroup.position.set(state.player.x, 0, state.player.z);
+      playerGroup.rotation.y = state.yaw;
+    }
+
+    function updateBreakAnimation(dt) {
+      const target = state.breakState.target;
+      if (!state.breakState.pointerHeld || !target || !scene.children.includes(target)) {
+        breakBarWrap.style.opacity = 0;
+        breakBar.style.width = "0%";
+        return;
+      }
+
+      state.breakState.progress += dt;
+      const pct = Math.min(1, state.breakState.progress / state.breakState.time);
+      breakBarWrap.style.opacity = 1;
+      breakBar.style.width = `${pct * 100}%`;
+
+      const s = 1 - pct * 0.15;
+      target.scale.setScalar(s);
+      if (target.material) {
+        target.material.emissive = new THREE.Color(0x331100);
+        target.material.emissiveIntensity = 0.08 + pct * 0.4;
+      }
+
+      if (pct >= 1) {
+        removeObject(target);
+        stopBreaking();
+        showMsg("Kırıldı!");
+      }
+    }
+
+    function removeObject(obj) {
+      const data = obj.userData || {};
+      if (data.type === "craftTable") return;
+      const key = `${data.x},${data.y},${data.z}`;
+      if (state.world.solid.has(key)) state.world.solid.delete(key);
+      scene.remove(obj);
+
+      if (data.type === "wood") {
+        state.inventory.wood += 2;
+        state.inventory.stick += 1;
+      } else if (data.type === "leaf") {
+        state.inventory.wood += 1;
+      } else if (data.type === "stone") {
+        state.inventory.stone += 1;
+      }
+      updateHud();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.033);
+
+      applyKeyboard();
+      syncMovementInput();
+
+      if (state.breakState.pointerHeld && !state.breakState.target) {
+        const t = getTargetRay();
+        if (t && t.object.userData?.type !== "craftTable") {
+          state.breakState.target = t.object;
+          state.breakState.time = breakTimeFor(t.object.userData?.type);
+          state.breakState.progress = 0;
+          breakBarWrap.style.opacity = 1;
+        }
+      }
+
+      updateMovement(dt);
+      updateChunkStreaming();
+      updatePlayerVisual();
       updateCamera();
-      updateHUD();
+      updateBreakAnimation(dt);
+      renderer.render(scene, camera);
     }
-    draw();
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
 
-  // expose simple controls for debugging
-  window.__blox = {player, blocks, chunks, toggleFast};
-</script>
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // spawn
+    updateChunkStreaming();
+    applyCharacter(0);
+    updateHud();
+    renderCraftList();
+    animate();
+  </script>
 </body>
 </html>
