@@ -6,42 +6,29 @@
   <title>BloxCraft Minecraft-Style 3D</title>
   <style>
     html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: linear-gradient(#a6dbff, #eaf8ff);
-      font-family: Arial, Helvetica, sans-serif;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
+      margin: 0; width: 100%; height: 100%; overflow: hidden;
+      background: linear-gradient(#a6dbff, #eaf8ff); font-family: Arial, sans-serif;
+      touch-action: none; user-select: none; -webkit-user-select: none;
     }
     #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-    #startScreen {
+    
+    .screen-overlay {
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
       z-index: 30; background: radial-gradient(circle at top, rgba(255,255,255,0.92), rgba(145,205,255,0.96));
     }
+    #worldScreen { display: none; z-index: 35; }
+    
     .card {
-      width: min(980px, 94vw);
-      background: rgba(255,255,255,0.90);
-      backdrop-filter: blur(8px);
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-      border: 1px solid rgba(255,255,255,0.68);
-      padding: 18px;
+      width: min(980px, 94vw); background: rgba(255,255,255,0.90); backdrop-filter: blur(8px);
+      border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.68);
+      padding: 18px; max-height: 90vh; overflow-y: auto;
     }
-    .title {
-      margin: 0 0 10px;
-      font-size: clamp(30px, 5vw, 54px);
-      font-weight: 900;
-      color: #144d7b;
-    }
+    .title { margin: 0 0 10px; font-size: clamp(30px, 5vw, 54px); font-weight: 900; color: #144d7b; }
     .sub { margin: 0 0 16px; color: #31556e; line-height: 1.5; font-size: 14px; }
     .grid { display: grid; grid-template-columns: repeat(2, minmax(140px, 1fr)); gap: 12px; margin-bottom: 14px; }
     .char {
       border: 2px solid transparent; border-radius: 18px; background: linear-gradient(180deg, #ffffff, #eef8ff);
-      padding: 12px; text-align: left; cursor: pointer; display: flex; gap: 12px; align-items: center;
-      width: 100%;
+      padding: 12px; text-align: left; cursor: pointer; display: flex; gap: 12px; align-items: center; width: 100%;
     }
     .char.selected { border-color: #2b7cff; box-shadow: 0 0 0 3px rgba(43,124,255,0.14); }
     .avatar {
@@ -51,15 +38,30 @@
     .name { font-weight: 800; color: #173d5c; }
     .desc { font-size: 12px; color: #587086; margin-top: 4px; }
     .row { display:flex; flex-wrap:wrap; gap: 10px; align-items:center; }
+    
     .btn {
       pointer-events: auto; border: 0; border-radius: 14px; padding: 12px 15px; background: #1f79ff;
       color: white; font-weight: 800; box-shadow: 0 10px 22px rgba(31,121,255,0.25); cursor: pointer;
     }
     .btn.secondary { background: #eff6ff; color: #194264; box-shadow: none; border: 1px solid #d7e8ff; }
+    .btn.success { background: #1eaa63; color: white; }
+    
     .toggle {
       display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.72);
       border: 1px solid rgba(0,0,0,0.07); border-radius: 999px; padding: 10px 12px; color: #1f4058; font-weight: 700;
     }
+    .input-field {
+      padding: 12px; border-radius: 12px; border: 1px solid #c2dcf0; width: 100%; box-sizing: border-box;
+      font-size: 16px; font-weight: bold; color: #144d7b; margin-bottom: 10px; outline: none;
+    }
+    
+    .world-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; max-height: 200px; overflow-y: auto; }
+    .world-item {
+      background: #f4f9ff; border: 1px solid #dcebfa; padding: 12px; border-radius: 12px; display: flex;
+      justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;
+    }
+    .world-item:hover { background: #e6f0ff; border-color: #b3d4ff; }
+    
     #hud {
       position: fixed; left: 12px; top: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
       width: min(290px, calc(100vw - 24px));
@@ -70,6 +72,7 @@
     }
     .barWrap { margin-top: 8px; background: rgba(0,0,0,0.09); border-radius: 999px; overflow: hidden; height: 12px; }
     .bar { height: 100%; width: 100%; border-radius: 999px; transition: width .08s linear; }
+    
     #crosshair {
       position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin-left: -9px; margin-top: -9px;
       z-index: 9; pointer-events: none; opacity: .85;
@@ -79,6 +82,7 @@
     }
     #crosshair:before { width: 18px; height: 2px; }
     #crosshair:after { width: 2px; height: 18px; }
+    
     #mobileUI { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
     #joystick {
       position: absolute; left: 18px; bottom: 18px; width: 128px; height: 128px; border-radius: 50%;
@@ -89,29 +93,41 @@
       border-radius: 50%; background: rgba(255,255,255,0.70); box-shadow: 0 8px 18px rgba(0,0,0,0.12);
     }
     #buttons {
-      position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; pointer-events: auto;
+      position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; pointer-events: auto;
     }
     .action {
-      min-width: 74px; min-height: 54px; border: 0; border-radius: 16px; background: rgba(255,255,255,0.8);
+      min-width: 65px; min-height: 54px; border: 0; border-radius: 16px; background: rgba(255,255,255,0.8);
       color: #143a54; font-weight: 800; box-shadow: 0 8px 18px rgba(0,0,0,0.12); touch-action: manipulation;
     }
     .action.primary { background: #1f79ff; color: white; }
     .action.good { background: #1eaa63; color: white; }
     .action.warn { background: #ff8b2b; color: white; }
     .action.danger { background: #ef4444; color: white; }
-    #craftModal {
+    .action.bag { background: #8b5cf6; color: white; }
+    .action.place { background: #3b82f6; color: white; } /* YENİ KOY BUTONU */
+    
+    .modal-overlay {
       position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(7, 20, 30, 0.50);
       z-index: 25; pointer-events: auto;
     }
-    .craftCard {
+    .modal-card {
       width: min(560px, 94vw); background: rgba(255,255,255,0.95); border-radius: 22px; padding: 18px;
-      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25); max-height: 80vh; overflow-y: auto;
     }
     .craftItem {
       display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px; border-radius: 14px;
-      background: #f4f9ff; margin-top: 10px;
+      background: #f4f9ff; margin-top: 10px; border: 1px solid #dcebfa;
     }
     .tiny { font-size: 12px; color: #5c7486; line-height: 1.4; }
+    
+    .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
+    .inv-slot {
+      background: #eef6ff; border: 2px dashed #b3d4ff; border-radius: 12px; padding: 15px; text-align: center;
+      font-weight: 800; color: #173d5c; display: flex; flex-direction: column; gap: 5px;
+    }
+    .inv-slot.has-item { border-style: solid; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .inv-count { font-size: 20px; color: #1f79ff; }
+    
     #message {
       position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 15; background: rgba(0,0,0,0.60);
       color: white; padding: 10px 14px; border-radius: 999px; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity .2s ease;
@@ -122,38 +138,21 @@
       border-radius: 14px; padding: 10px 12px; color: #285067; max-width: 240px; font-size: 12px; line-height: 1.4;
     }
     #breakBarWrap {
-      position: fixed;
-      left: 50%;
-      top: calc(50% + 24px);
-      transform: translateX(-50%);
-      width: min(220px, 60vw);
-      height: 10px;
-      background: rgba(0,0,0,0.12);
-      border-radius: 999px;
-      overflow: hidden;
-      z-index: 14;
-      opacity: 0;
-      pointer-events: none;
+      position: fixed; left: 50%; top: calc(50% + 24px); transform: translateX(-50%);
+      width: min(220px, 60vw); height: 10px; background: rgba(0,0,0,0.12); border-radius: 999px; overflow: hidden;
+      z-index: 14; opacity: 0; pointer-events: none;
     }
-    #breakBar {
-      width: 0%;
-      height: 100%;
-      background: linear-gradient(90deg, #ffb347, #ff5f6d);
-      border-radius: 999px;
-    }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } #hint { display: none; } .card { padding: 14px; } }
+    #breakBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffb347, #ff5f6d); border-radius: 999px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } #hint { display: none; } .card { padding: 14px; } #buttons { grid-template-columns: repeat(3, 1fr); } }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
 
-  <div id="startScreen">
+  <div id="startScreen" class="screen-overlay">
     <div class="card">
       <h1 class="title">BloxCraft 3D Survival</h1>
-      <p class="sub">
-        Minecraft hissine yakın 3D blok dünyası. 1. şahıs / 3. şahıs kamera, doğru yönler, sağlık barı, geniş chunk harita,
-        ağaç kesme, odunu tahtaya çevirme, taş toplama, craft table ve tahta araçlar var.
-      </p>
+      <p class="sub">Gerçek fizik, blok koyabilme ve düşebileceğin çukurlar eklendi. Karakterini seç!</p>
       <div class="grid" id="charGrid">
         <button class="char selected" data-char="0"><div class="avatar" style="background:#f08b8b;">A</div><div><div class="name">Alin</div><div class="desc">Kız • dengeli</div></div></button>
         <button class="char" data-char="1"><div class="avatar" style="background:#7e87ff;">M</div><div><div class="name">Mira</div><div class="desc">Kız • hızlı</div></div></button>
@@ -165,34 +164,58 @@
         <label class="toggle"><input type="checkbox" id="thirdPerson" checked /> 3. şahıs</label>
       </div>
       <div class="row">
-        <button class="btn" id="playBtn">Başla</button>
-        <button class="btn secondary" id="howBtn">Nasıl oynanır?</button>
+        <button class="btn" id="toWorldBtn">Devam Et ➔</button>
       </div>
-      <p class="tiny" style="margin-top:12px">En iyi sonuç için dosyayı <b>Live Server</b> veya <b>localhost</b> ile aç.</p>
+    </div>
+  </div>
+
+  <div id="worldScreen" class="screen-overlay">
+    <div class="card">
+      <h1 class="title">Dünya Seçimi</h1>
+      <div style="background:#f4f9ff; padding:15px; border-radius:16px; border:1px solid #dcebfa; margin-bottom:15px;">
+        <input type="text" id="worldNameInput" class="input-field" placeholder="Örn: Ada, Belediye..." />
+        <button class="btn success" id="createWorldBtn" style="width:100%">Yeni Dünya Kur & Başla</button>
+      </div>
+      <div style="font-weight:900; color:#153d5c; margin-top:10px;">Mevcut Dünyalarınız:</div>
+      <div class="world-list" id="worldListContainer"></div>
     </div>
   </div>
 
   <div id="hud">
     <div class="hudBox" id="statsBox">Yükleniyor...</div>
-    <div class="hudBox" id="invBox">Tahta: 0 • Taş: 0 • Çubuk: 0</div>
+    <div class="hudBox" id="worldInfoBox" style="font-weight:bold; color:#1f79ff;">Dünya: Yükleniyor</div>
     <div class="hudBox">
       <div style="font-weight:800; margin-bottom:4px;">Can</div>
       <div class="barWrap"><div class="bar" id="healthBar"></div></div>
       <div class="tiny" id="healthText" style="margin-top:6px;">100 / 100</div>
     </div>
   </div>
-  <div id="hint">Sol alt joystick ile hareket et. Sağ alt tuşlarla zıpla, kır, kamera değiştir, craft aç.</div>
+  
+  <div id="hint">Yön Tuşları / Joystick ile yürü. Farenin Sol tuşu KIR, Sağ Tuşu (veya Koy Butonu) blok KOY. I tuşu çanta.</div>
   <div id="crosshair"></div>
   <div id="message"></div>
   <div id="breakBarWrap"><div id="breakBar"></div></div>
 
-  <div id="craftModal">
-    <div class="craftCard">
+  <div id="craftModal" class="modal-overlay">
+    <div class="modal-card">
       <div class="row" style="justify-content:space-between; margin-bottom:8px">
-        <div><div style="font-size:22px; font-weight:900; color:#153d5c">Crafting Table</div><div class="tiny">Buradan tahta araçlar yapabilirsin.</div></div>
+        <div><div style="font-size:22px; font-weight:900; color:#153d5c">Crafting Table</div><div class="tiny">Tahta yap ve onlarla inşa et!</div></div>
         <button class="btn secondary" id="closeCraft">Kapat</button>
       </div>
       <div id="craftList"></div>
+    </div>
+  </div>
+
+  <div id="invModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="row" style="justify-content:space-between; margin-bottom:8px">
+        <div><div style="font-size:22px; font-weight:900; color:#8b5cf6">Sırt Çantası</div></div>
+        <button class="btn secondary" id="closeInv">Kapat</button>
+      </div>
+      <div style="font-weight:800; margin-top:15px; color:#153d5c">Materyaller</div>
+      <div class="inv-grid" id="invMats"></div>
+      <div style="font-weight:800; margin-top:15px; color:#153d5c">Aletler</div>
+      <div class="inv-grid" id="invTools"></div>
     </div>
   </div>
 
@@ -201,8 +224,10 @@
     <div id="buttons">
       <button class="action primary" id="jumpBtn">Zıpla</button>
       <button class="action danger" id="breakBtn">Kır</button>
-      <button class="action good" id="cameraBtn">1/3</button>
+      <button class="action place" id="placeBtn">Koy</button>
+      <button class="action good" id="cameraBtn">Kamera</button>
       <button class="action warn" id="craftBtn">Craft</button>
+      <button class="action bag" id="openInvBtn">🎒 Çanta</button>
     </div>
   </div>
 
@@ -213,7 +238,6 @@
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = false;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
@@ -223,9 +247,7 @@
     const clock = new THREE.Clock();
 
     const statsBox = document.getElementById("statsBox");
-    const invBox = document.getElementById("invBox");
-    const craftModal = document.getElementById("craftModal");
-    const craftList = document.getElementById("craftList");
+    const worldInfoBox = document.getElementById("worldInfoBox");
     const message = document.getElementById("message");
     const healthBar = document.getElementById("healthBar");
     const healthText = document.getElementById("healthText");
@@ -237,24 +259,16 @@
     const SEA = 1;
 
     const state = {
-      selectedChar: 0,
-      cameraMode: "third",
-      yaw: 0,
-      pitch: 0.08,
-      moveX: 0,
-      moveY: 0,
-      joyX: 0,
-      joyY: 0,
-      keyX: 0,
-      keyY: 0,
+      worldName: "Varsayılan", worldSeed: 0,
+      selectedChar: 0, cameraMode: "third",
+      yaw: 0, pitch: 0.08,
+      moveX: 0, moveY: 0, joyX: 0, joyY: 0, keyX: 0, keyY: 0,
       inventory: { wood: 0, plank: 0, stone: 0, stick: 0 },
-      tools: { pickaxe: false, axe: false, shovel: false },
-      health: 100,
-      maxHealth: 100,
-      world: { chunks: new Map(), solid: new Map(), targets: new Map() },
-      player: { x: 0, y: 4, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6 },
-      breakState: { active: false, target: null, progress: 0, time: 0, pointerHeld: false },
-      pointer: { x: 0, y: 0 }
+      tools: { pickaxe: false, axe: false, shovel: false, stonePickaxe: false, stoneAxe: false, stoneShovel: false },
+      health: 100, maxHealth: 100,
+      world: { chunks: new Map(), solid: new Map() }, // Voxel haritası
+      player: { x: 0, y: 15, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6 },
+      breakState: { active: false, target: null, progress: 0, time: 0, pointerHeld: false }
     };
 
     const chars = [
@@ -264,30 +278,14 @@
       { name: "Efe", color: 0x4cc36b, speed: 5.8 }
     ];
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x6ea1c5, 1.25);
-    scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(80, 130, 50);
-    sun.castShadow = false;
-    sun.shadow.mapSize.set(1024, 1024);
-    scene.add(sun);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x6ea1c5, 1.25); scene.add(hemi);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(80, 130, 50); scene.add(sun);
 
     const playerGroup = new THREE.Group();
-    const playerBody = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.35, 1.05, 4, 8),
-      new THREE.MeshStandardMaterial({ color: chars[0].color, roughness: 0.8 })
-    );
-    playerBody.castShadow = false;
-    playerBody.position.y = 1.2;
-    playerGroup.add(playerBody);
-
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.24, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xffd2bf, roughness: 0.9 })
-    );
-    head.position.y = 2.0;
-    head.castShadow = false;
-    playerGroup.add(head);
+    const playerBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 1.05, 4, 8), new THREE.MeshStandardMaterial({ color: chars[0].color, roughness: 0.8 }));
+    playerBody.position.y = 1.2; playerGroup.add(playerBody);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffd2bf, roughness: 0.9 }));
+    head.position.y = 2.0; playerGroup.add(head);
     scene.add(playerGroup);
 
     const eyeHeight = 1.72;
@@ -298,15 +296,22 @@
     const waterMat = new THREE.MeshStandardMaterial({ color: 0x66aaff, transparent: true, opacity: 0.55, roughness: 0.4 });
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 1 });
     const leafMat = new THREE.MeshStandardMaterial({ color: 0x3d9c4c, roughness: 1 });
+    const plankMat = new THREE.MeshStandardMaterial({ color: 0xc88c51, roughness: 0.9 }); // KOYULACAK TAHTA
 
     const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
 
-    function hash2(x, z) {
-      let n = x * 374761393 + z * 668265263;
-      n = (n ^ (n >> 13)) * 1274126177;
-      return ((n ^ (n >> 16)) >>> 0) / 4294967295;
-    }
+    // HEDEF GÖSTERİCİ (Voxel Oyun Kutusu)
+    const highlightGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02));
+    const highlightMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+    const targetOutline = new THREE.LineSegments(highlightGeo, highlightMat);
+    targetOutline.visible = false;
+    scene.add(targetOutline);
 
+    function hash2(x, z) {
+      x += state.worldSeed; z -= state.worldSeed;
+      let n = x * 374761393 + z * 668265263;
+      n = (n ^ (n >> 13)) * 1274126177; return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+    }
     function terrainHeight(x, z) {
       const n1 = Math.sin(x * 0.08) * 2.1 + Math.cos(z * 0.07) * 2.0;
       const n2 = Math.sin((x + z) * 0.045) * 1.7;
@@ -315,65 +320,39 @@
       return Math.max(1, Math.floor(4 + n1 + n2 + n3 + n4));
     }
 
+    // VOXEL KOORDİNAT SİSTEMİ (Tam sayılar)
     function addMesh(mat, x, y, z, type, chunkKey) {
       const mesh = new THREE.Mesh(cubeGeo, mat);
       mesh.position.set(x, y, z);
-      mesh.castShadow = false;
-      mesh.receiveShadow = false;
       mesh.userData = { type, x, y, z, chunkKey };
       scene.add(mesh);
-      state.world.solid.set(`${x},${y},${z}`, mesh);
+      if (type !== "water") {
+        state.world.solid.set(`${Math.round(x)},${Math.round(y)},${Math.round(z)}`, mesh);
+      }
       return mesh;
     }
 
     function addColumn(x, z, h, chunk) {
       for (let y = 0; y <= h; y++) {
-        let mat = grassMat;
-        let type = "grass";
+        let mat = grassMat, type = "grass";
         if (y < h - 2) { mat = stoneMat; type = "stone"; }
         else if (y < h) { mat = dirtMat; type = "dirt"; }
-        else { mat = grassMat; type = "grass"; }
-        const mesh = addMesh(mat, x, y - 0.5, z, type, chunk.key);
-        chunk.meshes.push(mesh);
+        chunk.meshes.push(addMesh(mat, x, y, z, type, chunk.key));
       }
-      if (h < SEA) {
-        const water = addMesh(waterMat, x, SEA - 0.5, z, "water", chunk.key);
-        chunk.meshes.push(water);
-      }
+      if (h < SEA) chunk.meshes.push(addMesh(waterMat, x, SEA, z, "water", chunk.key));
     }
 
     function addTree(x, z, groundY, chunk) {
-      const trunkH = 4 + Math.floor(hash2(x, z) * 3);
+      const trunkH = 4 + Math.floor(hash2(x, z) * 4);
       const trunkLean = hash2(z, x) > 0.72 ? 1 : 0;
       for (let i = 1; i <= trunkH; i++) {
         chunk.meshes.push(addMesh(woodMat, x + trunkLean, groundY + i, z, "wood", chunk.key));
       }
       const crownY = groundY + trunkH + 1;
-      const leafSets = [
-        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0]],
-        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1]],
-        [[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1],[0,2,0]]
-      ];
-      const offsets = leafSets[Math.floor(hash2(x * 7, z * 7) * leafSets.length)];
-      for (const [dx, dy, dz] of offsets) {
+      const leafSets = [[[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1]]];
+      for (const [dx, dy, dz] of leafSets[0]) {
         chunk.meshes.push(addMesh(leafMat, x + dx + trunkLean, crownY + dy, z + dz, "leaf", chunk.key));
       }
-    }
-
-    function addCraftTable(x, z, groundY) {
-      const group = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.BoxGeometry(1, 0.6, 1), new THREE.MeshStandardMaterial({ color: 0x7b4f2e, roughness: 1 }));
-      base.position.y = 0.3;
-      base.castShadow = true; base.receiveShadow = true;
-      group.add(base);
-      const top = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.18, 1.05), new THREE.MeshStandardMaterial({ color: 0xb47a4f, roughness: 1 }));
-      top.position.y = 0.69;
-      top.castShadow = true; top.receiveShadow = true;
-      group.add(top);
-      group.position.set(x, groundY + 0.1, z);
-      group.userData = { type: "craftTable", x, z, y: groundY };
-      scene.add(group);
-      return group;
     }
 
     function chunkKey(cx, cz) { return `${cx},${cz}`; }
@@ -382,31 +361,20 @@
     function generateChunk(cx, cz) {
       const key = chunkKey(cx, cz);
       if (state.world.chunks.has(key)) return state.world.chunks.get(key);
-
       const chunk = { key, meshes: [], x: cx, z: cz };
-      const baseX = cx * CHUNK;
-      const baseZ = cz * CHUNK;
+      const baseX = cx * CHUNK, baseZ = cz * CHUNK;
 
       for (let lx = 0; lx < CHUNK; lx++) {
         for (let lz = 0; lz < CHUNK; lz++) {
-          const x = baseX + lx;
-          const z = baseZ + lz;
+          const x = baseX + lx, z = baseZ + lz;
           const h = terrainHeight(x, z);
           addColumn(x, z, h, chunk);
 
           const treeRoll = hash2(x * 3, z * 3);
-          const rockyArea = h <= 4;
-          const treeChance = rockyArea ? 0.02 : 0.075;
-          if (treeRoll > 1 - treeChance && h >= 2) {
-            addTree(x, z, h - 0.5, chunk);
-          }
-
-          if (hash2(x * 11, z * 13) > 0.995 && h >= 2) {
-            chunk.meshes.push(addMesh(stoneMat, x, h + 0.5, z, "stone", chunk.key));
-          }
+          if (treeRoll > 0.90 && h >= 2) addTree(x, z, h, chunk);
+          if (hash2(x * 11, z * 13) > 0.98 && h >= 2) chunk.meshes.push(addMesh(stoneMat, x, h + 1, z, "stone", chunk.key));
         }
       }
-
       state.world.chunks.set(key, chunk);
       return chunk;
     }
@@ -415,16 +383,15 @@
       const chunk = state.world.chunks.get(key);
       if (!chunk) return;
       for (const mesh of chunk.meshes) {
+        if(mesh.userData.type !== "water") state.world.solid.delete(`${Math.round(mesh.position.x)},${Math.round(mesh.position.y)},${Math.round(mesh.position.z)}`);
         scene.remove(mesh);
       }
       state.world.chunks.delete(key);
     }
 
     function updateChunkStreaming() {
-      const pcx = worldToChunk(state.player.x);
-      const pcz = worldToChunk(state.player.z);
+      const pcx = worldToChunk(state.player.x), pcz = worldToChunk(state.player.z);
       const keep = new Set();
-
       for (let dx = -VIEW; dx <= VIEW; dx++) {
         for (let dz = -VIEW; dz <= VIEW; dz++) {
           const key = chunkKey(pcx + dx, pcz + dz);
@@ -432,456 +399,304 @@
           if (!state.world.chunks.has(key)) generateChunk(pcx + dx, pcz + dz);
         }
       }
-
-      for (const key of [...state.world.chunks.keys()]) {
-        if (!keep.has(key)) unloadChunk(key);
-      }
+      for (const key of [...state.world.chunks.keys()]) if (!keep.has(key)) unloadChunk(key);
     }
 
+    // YENİ ÇARPIŞMA (COLLISION) SİSTEMİ - BLOKLARI KONTROL EDER
     function getGroundHeight(x, z) {
-      return terrainHeight(Math.floor(x + 0.5), Math.floor(z + 0.5)) + 0.5;
+      const bx = Math.round(x);
+      const bz = Math.round(z);
+      // Oyuncunun bulunduğu seviyeden aşağı doğru gerçek blokları tara
+      for(let y = Math.floor(state.player.y + 1); y >= -10; y--) {
+         if(state.world.solid.has(`${bx},${y},${bz}`)) {
+            return y + 0.5; // Bloğun üst sınırı
+         }
+      }
+      return -10; // Sonsuz boşluğa düşme limiti
     }
 
     function getTargetRay() {
-      const origin = new THREE.Vector3();
-      camera.getWorldPosition(origin);
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
+      const origin = new THREE.Vector3(); camera.getWorldPosition(origin);
+      const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
       const ray = new THREE.Raycaster(origin, dir, 0.4, 6);
       const hits = ray.intersectObjects(scene.children, true);
       for (const hit of hits) {
         const obj = hit.object;
-        if (obj.userData?.type) return { object: obj, distance: hit.distance };
-        if (obj.parent?.userData?.type) return { object: obj.parent, distance: hit.distance };
+        if (obj.userData?.type) return { object: obj, distance: hit.distance, face: hit.face };
       }
       return null;
     }
 
-    function showMsg(txt, ms = 1200) {
-      message.textContent = txt;
-      message.style.opacity = 1;
-      clearTimeout(showMsg.t);
-      showMsg.t = setTimeout(() => message.style.opacity = 0, ms);
+    function showMsg(txt, ms = 1500) {
+      message.textContent = txt; message.style.opacity = 1;
+      clearTimeout(showMsg.t); showMsg.t = setTimeout(() => message.style.opacity = 0, ms);
     }
 
     function updateHud() {
-      const mode = state.cameraMode === "third" ? "3. şahıs" : "1. şahıs";
-      statsBox.innerHTML = `Mod: <b>${mode}</b><br>Karakter: <b>${chars[state.selectedChar].name}</b><br>Hız: <b>${state.player.speed.toFixed(1)}</b>`;
-      invBox.innerHTML = `Odun: <b>${state.inventory.wood}</b> • Tahta: <b>${state.inventory.plank}</b> • Taş: <b>${state.inventory.stone}</b> • Çubuk: <b>${state.inventory.stick}</b><br>Aletler: ${state.tools.pickaxe ? "Kazma " : ""}${state.tools.axe ? "Balta " : ""}${state.tools.shovel ? "Kürek" : ""}`;
+      statsBox.innerHTML = `Karakter: <b>${chars[state.selectedChar].name}</b>`;
+      worldInfoBox.textContent = `🌍 Dünya: ${state.worldName}`;
       healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
-      healthBar.style.background = state.health > 60 ? "linear-gradient(90deg,#22c55e,#86efac)" : state.health > 30 ? "linear-gradient(90deg,#f59e0b,#fde68a)" : "linear-gradient(90deg,#ef4444,#fb7185)";
       healthText.textContent = `${Math.max(0, Math.floor(state.health))} / ${state.maxHealth}`;
+      updateInvModal();
     }
 
-    function applyCharacter(index) {
-      state.selectedChar = index;
-      state.player.speed = chars[index].speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
-      playerBody.material.color.setHex(chars[index].color);
-      updateHud();
+    function updateInvModal() {
+      const mats = document.getElementById("invMats"), tools = document.getElementById("invTools");
+      mats.innerHTML = ""; tools.innerHTML = "";
+      const mList = [{ id: "wood", name: "Odun", icon: "🪵" }, { id: "plank", name: "Tahta", icon: "🟫" }, { id: "stone", name: "Taş", icon: "🪨" }, { id: "stick", name: "Çubuk", icon: "🦯" }];
+      mList.forEach(m => {
+        const c = state.inventory[m.id];
+        mats.innerHTML += `<div class="inv-slot ${c>0?'has-item':''}"><div>${m.icon}</div><div>${m.name}</div><div class="inv-count">${c}</div></div>`;
+      });
     }
 
     function renderCraftList() {
       const recipes = [
-        { name: "Odunu Tahtaya Çevir", need: { wood: 1 }, out: { plank: 4 }, note: "Ağaçtan çıkan odunu işlenmiş tahtaya dönüştür." },
-        { name: "Çubuk", need: { plank: 2 }, out: { stick: 4 }, note: "Araçların temel malzemesi." },
-        { name: "Tahta Kazma", need: { plank: 3, stick: 2 }, out: { tool: "pickaxe" }, note: "Taş kırmak için daha iyi." },
-        { name: "Tahta Balta", need: { plank: 3, stick: 2 }, out: { tool: "axe" }, note: "Ağaç kesmeyi hızlandırır." },
-        { name: "Tahta Kürek", need: { plank: 2, stick: 1 }, out: { tool: "shovel" }, note: "Toprak işleri için." }
+        { name: "Odunu Tahtaya Çevir", need: { wood: 1 }, out: { plank: 4 }, note: "Binalar için tahta üret. (KOYULABİLİR)" },
+        { name: "Çubuk", need: { plank: 2 }, out: { stick: 4 }, note: "Alet sapı." },
+        { name: "Taş Kazma", need: { stone: 3, stick: 2 }, out: { tool: "stonePickaxe" }, note: "Taşları hızlı kırar." },
+        { name: "Taş Balta", need: { stone: 3, stick: 2 }, out: { tool: "stoneAxe" }, note: "Ağaçları hızlı keser." }
       ];
-      craftList.innerHTML = "";
+      const cl = document.getElementById("craftList"); cl.innerHTML = "";
       recipes.forEach((r) => {
-        const row = document.createElement("div");
-        row.className = "craftItem";
+        const row = document.createElement("div"); row.className = "craftItem";
         row.innerHTML = `<div><div style="font-weight:800;color:#173d5c">${r.name}</div><div class="tiny">${Object.entries(r.need).map(([k, v]) => `${k}: ${v}`).join(" • ")}<br>${r.note}</div></div>`;
-        const btn = document.createElement("button");
-        btn.className = "btn";
-        btn.textContent = "Yap";
-        btn.onclick = () => craft(r);
-        row.appendChild(btn);
-        craftList.appendChild(row);
+        const btn = document.createElement("button"); btn.className = "btn"; btn.textContent = "Yap";
+        btn.onclick = () => craft(r); row.appendChild(btn); cl.appendChild(row);
       });
     }
 
-    function hasMaterials(req) {
-      for (const [k, v] of Object.entries(req)) if ((state.inventory[k] || 0) < v) return false;
-      return true;
-    }
-
-    function spendMaterials(req) {
-      for (const [k, v] of Object.entries(req)) state.inventory[k] -= v;
-    }
-
     function craft(recipe) {
-      if (!hasMaterials(recipe.need)) return showMsg("Malzeme yetmiyor.");
-      spendMaterials(recipe.need);
+      for (const [k, v] of Object.entries(recipe.need)) if ((state.inventory[k] || 0) < v) return showMsg("Malzeme eksik.");
+      for (const [k, v] of Object.entries(recipe.need)) state.inventory[k] -= v;
       if (recipe.out.tool) state.tools[recipe.out.tool] = true;
       if (recipe.out.stick) state.inventory.stick += recipe.out.stick;
       if (recipe.out.plank) state.inventory.plank += recipe.out.plank;
-      updateHud();
-      renderCraftList();
-      showMsg(`${recipe.name} yapıldı!`);
-    }
-
-    function openCraft() { craftModal.style.display = "flex"; }
-    function closeCraft() { craftModal.style.display = "none"; }
-
-    function damage(amount) {
-      state.health = Math.max(0, state.health - amount);
-      updateHud();
-      showMsg(`Can -${amount}`);
+      updateHud(); renderCraftList(); showMsg(`${recipe.name} yapıldı!`);
     }
 
     function breakTimeFor(type) {
-      const toolBonus = state.tools.pickaxe && type === "stone" ? 0.35 : state.tools.axe && type === "wood" ? 0.40 : 1.0;
-      const base = type === "stone" ? 1.35 : type === "wood" ? 1.0 : type === "leaf" ? 0.35 : 0.7;
-      return base * toolBonus;
+      let tBonus = type==="stone"&&state.tools.stonePickaxe?0.2 : type==="wood"&&state.tools.stoneAxe?0.2 : 1.0;
+      return (type === "stone" ? 1.3 : type === "wood" ? 1.0 : 0.5) * tBonus;
     }
 
     function startBreaking() {
       const target = getTargetRay();
-      if (!target) {
-        showMsg("Hedef yok.");
-        return;
-      }
-      const type = target.object.userData?.type;
-      if (!type) return;
-      if (type === "craftTable") {
-        openCraft();
-        return;
-      }
-      state.breakState.active = true;
-      state.breakState.target = target.object;
-      state.breakState.progress = 0;
-      state.breakState.time = breakTimeFor(type);
-      breakBarWrap.style.opacity = 1;
+      if (!target || target.object.userData.type === "water") return;
+      state.breakState.active = true; state.breakState.target = target.object;
+      state.breakState.progress = 0; state.breakState.time = breakTimeFor(target.object.userData.type);
     }
 
     function stopBreaking() {
-      state.breakState.active = false;
-      state.breakState.target = null;
-      state.breakState.progress = 0;
-      breakBarWrap.style.opacity = 0;
-      breakBar.style.width = "0%";
+      state.breakState.active = false; state.breakState.target = null;
+      breakBarWrap.style.opacity = 0; breakBar.style.width = "0%";
     }
 
-    function interactTap() {
+    // YENİ: BLOK KOYMA FONKSİYONU
+    function placeBlock() {
       const target = getTargetRay();
-      if (!target) return showMsg("Yakında bir şey yok.");
-      if (target.object.userData?.type === "craftTable") return openCraft();
-      const type = target.object.userData?.type;
-      if (type === "wood" || type === "stone" || type === "leaf" || type === "grass" || type === "dirt") {
-        state.breakState.target = target.object;
-        state.breakState.time = breakTimeFor(type);
-        state.breakState.progress = 1;
-        removeObject(target.object);
-        showMsg(type === "wood" ? "Ağaç toplandı." : "Blok kırıldı.");
-      }
-    }
+      if (!target || !target.face) return showMsg("Koyacak yüzey yok!");
+      if (state.inventory.plank <= 0) return showMsg("Tahtan bitti! Ağaç kesip Craft'tan çevir.");
 
-    function jump() {
-      if (state.player.onGround) {
-        state.player.vy = 7.1;
-        state.player.onGround = false;
-      }
-    }
+      // Yüzeyin normalini alarak yeni bloğun merkez noktasını buluyoruz
+      const pos = target.object.position.clone().add(target.face.normal);
+      const bx = Math.round(pos.x); const by = Math.round(pos.y); const bz = Math.round(pos.z);
 
-    function toggleCamera() {
-      state.cameraMode = state.cameraMode === "third" ? "first" : "third";
-      document.getElementById("thirdPerson").checked = state.cameraMode === "third";
+      // Oyuncu kendi içine blok koyamasın (sıkışmayı önleme)
+      const px = Math.round(state.player.x); const py = Math.floor(state.player.y); const pz = Math.round(state.player.z);
+      if (bx === px && bz === pz && (by === py || by === py + 1)) {
+        return showMsg("Kendi üstüne koyamazsın!");
+      }
+
+      const chunkKey = chunkKeyFn(worldToChunk(bx), worldToChunk(bz));
+      let chunk = state.world.chunks.get(chunkKey);
+      if (!chunk) return;
+
+      state.inventory.plank -= 1;
+      const mesh = addMesh(plankMat, bx, by, bz, "plank", chunkKey);
+      chunk.meshes.push(mesh);
       updateHud();
-      showMsg(state.cameraMode === "third" ? "3. şahıs kamera" : "1. şahıs kamera");
+      showMsg("Tahta koydun.");
+    }
+    function chunkKeyFn(cx, cz) { return `${cx},${cz}`; }
+
+    function removeObject(obj) {
+      const data = obj.userData;
+      if (!data) return;
+      const key = `${Math.round(data.x)},${Math.round(data.y)},${Math.round(data.z)}`;
+      if (state.world.solid.has(key)) state.world.solid.delete(key);
+      scene.remove(obj);
+
+      if (data.type === "wood") state.inventory.wood += 1;
+      else if (data.type === "plank") state.inventory.plank += 1; // Koyduğunu geri alma
+      else if (data.type === "stone") state.inventory.stone += 1;
+      updateHud();
     }
 
-    document.getElementById("playBtn").onclick = () => {
-      applyCharacter(state.selectedChar);
+    // Arayüz Bağlantıları
+    document.getElementById("toWorldBtn").onclick = () => { document.getElementById("startScreen").style.display="none"; document.getElementById("worldScreen").style.display="flex"; };
+    document.getElementById("createWorldBtn").onclick = () => {
+      state.worldName = document.getElementById("worldNameInput").value.trim() || "Yeni Dünya";
+      for (let i = 0; i < state.worldName.length; i++) state.worldSeed += state.worldName.charCodeAt(i);
+      state.selectedChar = Number(document.querySelector(".char.selected").dataset.char);
+      state.player.speed = chars[state.selectedChar].speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
       state.cameraMode = document.getElementById("thirdPerson").checked ? "third" : "first";
-      document.getElementById("startScreen").style.display = "none";
-      showMsg("Oyuna hoş geldin!");
-      updateHud();
-      renderCraftList();
-      updateChunkStreaming();
+      playerBody.material.color.setHex(chars[state.selectedChar].color);
+      document.getElementById("worldScreen").style.display = "none";
+      updateHud(); renderCraftList(); updateChunkStreaming();
     };
-    document.getElementById("howBtn").onclick = () => showMsg("Ağaç kes, odunu tahtaya çevir, taş topla, craft table aç.");
-    document.getElementById("closeCraft").onclick = closeCraft;
-    document.getElementById("jumpBtn").onclick = jump;
-    document.getElementById("cameraBtn").onclick = toggleCamera;
-    document.getElementById("craftBtn").onclick = openCraft;
-    document.getElementById("breakBtn").addEventListener("pointerdown", () => { state.breakState.pointerHeld = true; startBreaking(); });
-    document.getElementById("breakBtn").addEventListener("pointerup", () => { state.breakState.pointerHeld = false; stopBreaking(); });
-    document.getElementById("breakBtn").addEventListener("pointercancel", () => { state.breakState.pointerHeld = false; stopBreaking(); });
-    document.getElementById("breakBtn").addEventListener("pointerleave", () => { if (state.breakState.pointerHeld) { state.breakState.pointerHeld = false; stopBreaking(); }});
+    
+    document.getElementById("closeCraft").onclick = () => document.getElementById("craftModal").style.display="none";
+    document.getElementById("closeInv").onclick = () => document.getElementById("invModal").style.display="none";
+    document.getElementById("jumpBtn").onclick = () => { if (state.player.onGround) { state.player.vy = 7.1; state.player.onGround = false; } };
+    document.getElementById("cameraBtn").onclick = () => { state.cameraMode = state.cameraMode === "third"?"first":"third"; };
+    document.getElementById("craftBtn").onclick = () => document.getElementById("craftModal").style.display="flex";
+    document.getElementById("openInvBtn").onclick = () => { document.getElementById("invModal").style.display="flex"; updateInvModal(); };
+    document.getElementById("placeBtn").onclick = placeBlock;
+    
+    const bBtn = document.getElementById("breakBtn");
+    bBtn.addEventListener("pointerdown", () => { state.breakState.pointerHeld = true; startBreaking(); });
+    bBtn.addEventListener("pointerup", () => { state.breakState.pointerHeld = false; stopBreaking(); });
+    bBtn.addEventListener("pointercancel", () => { state.breakState.pointerHeld = false; stopBreaking(); });
 
     document.getElementById("charGrid").addEventListener("click", (e) => {
-      const btn = e.target.closest(".char");
-      if (!btn) return;
-      document.querySelectorAll(".char").forEach((x) => x.classList.remove("selected"));
-      btn.classList.add("selected");
-      applyCharacter(Number(btn.dataset.char));
-    });
-
-    document.getElementById("fastMode").addEventListener("change", () => applyCharacter(state.selectedChar));
-    document.getElementById("thirdPerson").addEventListener("change", (e) => {
-      state.cameraMode = e.target.checked ? "third" : "first";
-      updateHud();
+      const btn = e.target.closest(".char"); if (!btn) return;
+      document.querySelectorAll(".char").forEach((x) => x.classList.remove("selected")); btn.classList.add("selected");
     });
 
     let joy = { active: false, id: null, cx: 0, cy: 0 };
-    const joystick = document.getElementById("joystick");
-    const stick = document.getElementById("stick");
-
-    joystick.addEventListener("pointerdown", (e) => {
-      joy.active = true;
-      joy.id = e.pointerId;
-      joy.cx = e.clientX;
-      joy.cy = e.clientY;
-      joystick.setPointerCapture(e.pointerId);
-    });
+    const joystick = document.getElementById("joystick"), stick = document.getElementById("stick");
+    joystick.addEventListener("pointerdown", (e) => { joy.active=true; joy.id=e.pointerId; joy.cx=e.clientX; joy.cy=e.clientY; joystick.setPointerCapture(e.pointerId); });
     joystick.addEventListener("pointermove", (e) => {
       if (!joy.active || e.pointerId !== joy.id) return;
-      const dx = e.clientX - joy.cx;
-      const dy = e.clientY - joy.cy;
-      const max = 44;
-      const nx = Math.max(-max, Math.min(max, dx));
-      const ny = Math.max(-max, Math.min(max, dy));
+      const dx = e.clientX - joy.cx, dy = e.clientY - joy.cy, max = 44;
+      const nx = Math.max(-max, Math.min(max, dx)), ny = Math.max(-max, Math.min(max, dy));
       stick.style.transform = `translate(${nx}px, ${ny}px)`;
-      state.joyX = nx / max;
-      state.joyY = -ny / max;
+      state.joyX = nx / max; state.joyY = -ny / max;
     });
-    function endJoy(e) {
-      if (e.pointerId !== joy.id) return;
-      joy.active = false;
-      state.joyX = 0;
-      state.joyY = 0;
-      stick.style.transform = "translate(0px, 0px)";
-      syncMovementInput();
-    }
-    joystick.addEventListener("pointerup", endJoy);
-    joystick.addEventListener("pointercancel", endJoy);
-    joystick.addEventListener("pointerleave", endJoy);
+    function endJoy(e) { if (e.pointerId !== joy.id) return; joy.active = false; state.joyX = 0; state.joyY = 0; stick.style.transform = "translate(0px, 0px)"; syncMovementInput(); }
+    joystick.addEventListener("pointerup", endJoy); joystick.addEventListener("pointercancel", endJoy);
 
     let drag = null;
     window.addEventListener("pointerdown", (e) => {
-      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest("#craftModal"))) return;
+      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay"))) return;
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
     });
     window.addEventListener("pointermove", (e) => {
       if (!drag || drag.id !== e.pointerId) return;
-      const dx = e.clientX - drag.x;
-      const dy = e.clientY - drag.y;
-      drag.x = e.clientX;
-      drag.y = e.clientY;
-      state.yaw -= dx * 0.0042;
-      state.pitch = Math.max(-1.35, Math.min(0.85, state.pitch - dy * 0.0032));
+      state.yaw -= (e.clientX - drag.x) * 0.0042; state.pitch = Math.max(-1.35, Math.min(0.85, state.pitch - (e.clientY - drag.y) * 0.0032));
+      drag.x = e.clientX; drag.y = e.clientY;
     });
     window.addEventListener("pointerup", (e) => { if (drag && drag.id === e.pointerId) drag = null; });
 
     const keys = {};
     window.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
-      if (e.key === " ") jump();
-      if (e.key.toLowerCase() === "e") interactTap();
-      if (e.key.toLowerCase() === "c") toggleCamera();
-      if (e.key.toLowerCase() === "f") openCraft();
-      if (e.key.toLowerCase() === "q") startBreaking();
+      if (e.key === " ") document.getElementById("jumpBtn").click();
+      if (e.key.toLowerCase() === "r") placeBlock(); // PC'de R ile koyma
+      if (e.key.toLowerCase() === "c") document.getElementById("cameraBtn").click();
+      if (e.key.toLowerCase() === "i") document.getElementById("openInvBtn").click();
     });
-    window.addEventListener("keyup", (e) => {
-      keys[e.key.toLowerCase()] = false;
-      if (e.key.toLowerCase() === "q") stopBreaking();
+    window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
+    
+    // PC'de Sol Tık: Kır, Sağ Tık: Koy
+    window.addEventListener("mousedown", (e) => {
+      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay"))) return;
+      if (e.button === 0) { state.breakState.pointerHeld = true; startBreaking(); }
+      if (e.button === 2) placeBlock();
     });
+    window.addEventListener("mouseup", (e) => { if (e.button === 0) { state.breakState.pointerHeld = false; stopBreaking(); } });
+    window.addEventListener("contextmenu", (e) => e.preventDefault()); // Sağ tık menüsünü engelle
 
     function applyKeyboard() {
       let mx = 0, my = 0;
-      if (keys["w"] || keys["arrowup"]) my += 1;
-      if (keys["s"] || keys["arrowdown"]) my -= 1;
-      if (keys["a"] || keys["arrowleft"]) mx -= 1;
-      if (keys["d"] || keys["arrowright"]) mx += 1;
-      if (mx || my) {
-        const l = Math.hypot(mx, my);
-        state.keyX = mx / l;
-        state.keyY = my / l;
-      } else {
-        state.keyX = 0;
-        state.keyY = 0;
-      }
+      if (keys["w"] || keys["arrowup"]) my += 1; if (keys["s"] || keys["arrowdown"]) my -= 1;
+      if (keys["a"] || keys["arrowleft"]) mx -= 1; if (keys["d"] || keys["arrowright"]) mx += 1;
+      if (mx || my) { const l = Math.hypot(mx, my); state.keyX = mx / l; state.keyY = my / l; } else { state.keyX = 0; state.keyY = 0; }
     }
-
     function syncMovementInput() {
-      state.moveX = Math.max(-1, Math.min(1, state.joyX + state.keyX));
-      state.moveY = Math.max(-1, Math.min(1, state.joyY + state.keyY));
-      if (Math.abs(state.moveX) < 0.03) state.moveX = 0;
-      if (Math.abs(state.moveY) < 0.03) state.moveY = 0;
+      state.moveX = Math.max(-1, Math.min(1, state.joyX + state.keyX)); state.moveY = Math.max(-1, Math.min(1, state.joyY + state.keyY));
+      if (Math.abs(state.moveX) < 0.03) state.moveX = 0; if (Math.abs(state.moveY) < 0.03) state.moveY = 0;
     }
 
     function updateMovement(dt) {
       const yaw = state.yaw;
-      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
-      const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-
-      const input = new THREE.Vector3();
-      input.addScaledVector(forward, state.moveY);
-      input.addScaledVector(right, state.moveX);
-
-      const desiredSpeed = state.player.speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
-      if (input.lengthSq() > 0) input.normalize().multiplyScalar(desiredSpeed);
+      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const input = new THREE.Vector3().addScaledVector(forward, state.moveY).addScaledVector(right, state.moveX);
+      if (input.lengthSq() > 0) input.normalize().multiplyScalar(state.player.speed);
 
       const accel = state.player.onGround ? 38 : 10;
       state.player.vx += (input.x - state.player.vx) * Math.min(1, accel * dt);
       state.player.vz += (input.z - state.player.vz) * Math.min(1, accel * dt);
 
-      if (!state.player.onGround) {
-        state.player.vy -= 18 * dt;
-      } else {
+      if (!state.player.onGround) state.player.vy -= 18 * dt;
+      else {
         state.player.vy = Math.max(state.player.vy, -1.2);
         const braking = (Math.abs(state.moveX) < 0.03 && Math.abs(state.moveY) < 0.03) ? 18 : 9;
-        state.player.vx *= Math.max(0, 1 - braking * dt);
-        state.player.vz *= Math.max(0, 1 - braking * dt);
-        if (Math.abs(state.player.vx) < 0.01) state.player.vx = 0;
-        if (Math.abs(state.player.vz) < 0.01) state.player.vz = 0;
+        state.player.vx *= Math.max(0, 1 - braking * dt); state.player.vz *= Math.max(0, 1 - braking * dt);
       }
 
-      const prevX = state.player.x;
-      const prevZ = state.player.z;
-      const prevY = state.player.y;
-      const prevGround = getGroundHeight(prevX, prevZ);
+      state.player.x += state.player.vx * dt; state.player.z += state.player.vz * dt; state.player.y += state.player.vy * dt;
 
-      state.player.x += state.player.vx * dt;
-      state.player.z += state.player.vz * dt;
-      state.player.y += state.player.vy * dt;
-
+      // YENİ FİZİK KONTROLÜ
       const ground = getGroundHeight(state.player.x, state.player.z);
-      const groundDrop = prevGround - ground;
-
-      if (state.player.onGround && groundDrop > 0 && groundDrop <= 1.15 && state.player.vy <= 0.2) {
-        state.player.y = ground;
-        state.player.vy = 0;
-        state.player.onGround = true;
-      } else if (state.player.y <= ground) {
-        if (prevY - ground > 2.8) {
-          damage(Math.min(30, Math.round((prevY - ground - 2.2) * 12)));
-        }
-        state.player.y = ground;
-        state.player.vy = 0;
+      
+      // Eğer oyuncu yere deydiyse (veya altındaki blok kırılıp aniden ground düştüyse)
+      if (state.player.y <= ground) {
+        state.player.y = ground; 
+        state.player.vy = 0; 
         state.player.onGround = true;
       } else {
-        state.player.onGround = false;
+        state.player.onGround = false; // Havada süzülüyoruz veya çukura düşüyoruz
       }
-
-      const worldLimit = 9999;
-      state.player.x = Math.max(-worldLimit, Math.min(worldLimit, state.player.x));
-      state.player.z = Math.max(-worldLimit, Math.min(worldLimit, state.player.z));
     }
 
     function updateCamera() {
-      const px = state.player.x;
-      const py = state.player.y + eyeHeight;
-      const pz = state.player.z;
-      const lookX = px + Math.sin(state.yaw) * Math.cos(state.pitch);
-      const lookY = py + Math.sin(state.pitch) * 2.1;
-      const lookZ = pz + Math.cos(state.yaw) * Math.cos(state.pitch);
-
-      if (state.cameraMode === "first") {
-        camera.position.set(px, py, pz);
-        camera.lookAt(lookX, lookY, lookZ);
-        playerGroup.visible = false;
-      } else {
+      const px = state.player.x, py = state.player.y + eyeHeight, pz = state.player.z;
+      const lookX = px + Math.sin(state.yaw) * Math.cos(state.pitch), lookY = py + Math.sin(state.pitch) * 2.1, lookZ = pz + Math.cos(state.yaw) * Math.cos(state.pitch);
+      if (state.cameraMode === "first") { camera.position.set(px, py, pz); camera.lookAt(lookX, lookY, lookZ); playerGroup.visible = false; }
+      else {
         playerGroup.visible = true;
         const dist = 4.8;
-        const desired = new THREE.Vector3(
-          px - Math.sin(state.yaw) * dist,
-          py + 1.7,
-          pz - Math.cos(state.yaw) * dist
-        );
-        camera.position.lerp(desired, 0.14);
-        camera.lookAt(px, py + 0.95, pz);
+        const desired = new THREE.Vector3(px - Math.sin(state.yaw) * dist, py + 1.7, pz - Math.cos(state.yaw) * dist);
+        camera.position.lerp(desired, 0.14); camera.lookAt(px, py + 0.95, pz);
       }
-    }
-
-    function updatePlayerVisual() {
-      playerGroup.position.set(state.player.x, 0, state.player.z);
-      playerGroup.rotation.y = state.yaw;
-    }
-
-    function updateBreakAnimation(dt) {
-      const target = state.breakState.target;
-      if (!state.breakState.pointerHeld || !target || !scene.children.includes(target)) {
-        breakBarWrap.style.opacity = 0;
-        breakBar.style.width = "0%";
-        return;
-      }
-
-      state.breakState.progress += dt;
-      const pct = Math.min(1, state.breakState.progress / state.breakState.time);
-      breakBarWrap.style.opacity = 1;
-      breakBar.style.width = `${pct * 100}%`;
-
-      const s = 1 - pct * 0.15;
-      target.scale.setScalar(s);
-      if (target.material) {
-        target.material.emissive = new THREE.Color(0x331100);
-        target.material.emissiveIntensity = 0.08 + pct * 0.4;
-      }
-
-      if (pct >= 1) {
-        removeObject(target);
-        stopBreaking();
-        showMsg("Kırıldı!");
-      }
-    }
-
-    function removeObject(obj) {
-      const data = obj.userData || {};
-      if (data.type === "craftTable") return;
-      const key = `${data.x},${data.y},${data.z}`;
-      if (state.world.solid.has(key)) state.world.solid.delete(key);
-      scene.remove(obj);
-
-      if (data.type === "wood") {
-        state.inventory.wood += 2;
-        state.inventory.stick += 1;
-      } else if (data.type === "leaf") {
-        state.inventory.wood += 1;
-      } else if (data.type === "stone") {
-        state.inventory.stone += 1;
-      }
-      updateHud();
     }
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.033);
+      if (document.getElementById("startScreen").style.display !== "none" || document.getElementById("worldScreen").style.display !== "none") return;
 
-      applyKeyboard();
-      syncMovementInput();
-
-      if (state.breakState.pointerHeld && !state.breakState.target) {
-        const t = getTargetRay();
-        if (t && t.object.userData?.type !== "craftTable") {
-          state.breakState.target = t.object;
-          state.breakState.time = breakTimeFor(t.object.userData?.type);
-          state.breakState.progress = 0;
-          breakBarWrap.style.opacity = 1;
-        }
+      applyKeyboard(); syncMovementInput();
+      
+      // Hedefleme Kutusu Güncellemesi
+      const tRay = getTargetRay();
+      if (tRay && tRay.object.userData?.type && tRay.object.userData.type !== "water") {
+        targetOutline.position.copy(tRay.object.position);
+        targetOutline.visible = true;
+      } else {
+        targetOutline.visible = false;
       }
 
-      updateMovement(dt);
-      updateChunkStreaming();
-      updatePlayerVisual();
+      if (state.breakState.pointerHeld && !state.breakState.target) startBreaking();
+
+      updateMovement(dt); updateChunkStreaming();
+      playerGroup.position.set(state.player.x, 0, state.player.z); playerGroup.rotation.y = state.yaw;
       updateCamera();
-      updateBreakAnimation(dt);
+
+      // Kırma Animasyonu
+      if (state.breakState.active && state.breakState.target) {
+        state.breakState.progress += dt;
+        const pct = Math.min(1, state.breakState.progress / state.breakState.time);
+        breakBarWrap.style.opacity = 1; breakBar.style.width = `${pct * 100}%`;
+        state.breakState.target.scale.setScalar(1 - pct * 0.15);
+        if (pct >= 1) { removeObject(state.breakState.target); stopBreaking(); showMsg("Kırıldı!"); }
+      }
+
       renderer.render(scene, camera);
     }
-
-    window.addEventListener("resize", () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // spawn
-    updateChunkStreaming();
-    applyCharacter(0);
-    updateHud();
-    renderCraftList();
+    window.addEventListener("resize", () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
     animate();
   </script>
 </body>
