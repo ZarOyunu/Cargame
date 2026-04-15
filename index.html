@@ -1,2121 +1,677 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Ege</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
-<style>
-    :root {
-        --bg-color: #0f1015;
-        --navbar-bg: #171821;
-        --card-bg: #222330;
-        --accent-color: #00ff88;
-        --text-main: #ffffff;
-        --text-muted: #a0a4b8;
-        --panel: rgba(0,0,0,.45);
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>BloxCraft Mobile</title>
+  <style>
+    :root{
+      --bg:#07111f; --panel:rgba(10,18,32,.78); --panel2:rgba(16,28,48,.92);
+      --text:#eef6ff; --muted:#a9bfd7; --accent:#4bd0ff; --accent2:#7cf28a; --danger:#ff6b6b;
+      --shadow:0 18px 45px rgba(0,0,0,.38); --radius:22px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg-color); color: var(--text-main); }
-
-    #hub-container { width: 100%; height: 100%; position: absolute; inset: 0; overflow-y: auto; background: var(--bg-color); z-index: 10; }
-    .navbar { background: var(--navbar-bg); padding: 15px 40px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #2a2b38; position: sticky; top:0; z-index: 100; }
-    .brand-container { display:flex; align-items:center; gap:15px; }
-    .logo { width:40px; height:40px; background: linear-gradient(45deg,#00ff88,#00b8ff); border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:#000; }
-    .brand-name { font-size:24px; font-weight:800; letter-spacing:1px; }
-    .user-profile { display:flex; align-items:center; gap:10px; background: var(--card-bg); padding:5px 15px 5px 5px; border-radius:20px; border:1px solid var(--accent-color); }
-    .avatar { width:35px; height:35px; border-radius:50%; background:var(--accent-color); color:#000; display:flex; align-items:center; justify-content:center; font-weight:700; }
-    .main-container { padding:40px; max-width:1400px; margin:0 auto; }
-    .section-title { font-size:28px; margin-bottom:25px; font-weight:700; display:flex; align-items:center; gap:10px; }
-    .games-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:30px; }
-    .game-card { background:var(--card-bg); border-radius:15px; overflow:hidden; position:relative; cursor:pointer; border:1px solid transparent; transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
-    .game-card:hover { transform: translateY(-8px); box-shadow: 0 10px 20px rgba(0,255,136,.1); border-color: var(--accent-color); }
-    .game-thumbnail { width:100%; height:160px; background:#2a2b38; display:flex; align-items:center; justify-content:center; font-size:50px; position:relative; }
-    .play-btn-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); width:60px; height:60px; border-radius:50%; background:var(--accent-color); color:#000; display:flex; align-items:center; justify-content:center; font-size:24px; transition: transform .25s cubic-bezier(0.175,0.885,0.32,1.275); }
-    .game-card:hover .play-btn-overlay { transform:translate(-50%,-50%) scale(1); }
-    .game-info { padding:20px; }
-    .game-title { font-size:20px; font-weight:700; margin-bottom:8px; }
-    .game-developer { color: var(--text-muted); font-size:14px; margin-bottom:15px; }
-
-    #game-container { width:100%; height:100%; display:none; position:absolute; inset:0; z-index:20; background: linear-gradient(#87ceeb, #c9f0ff); }
-    #loading-screen { position:absolute; inset:0; background: rgba(15,16,21,.82); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; }
-    .spinner { width:60px; height:60px; border:6px solid #2a2b38; border-top-color:var(--accent-color); border-radius:50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    #loading-text { margin-top:20px; font-size:22px; font-weight:700; color:var(--accent-color); }
-    #server-logs { margin-top:15px; font-family: monospace; color:var(--text-muted); text-align:center; font-size:14px; max-width:420px; }
-
-    #game-ui { position:absolute; top:20px; left:20px; z-index:40; pointer-events:none; }
-    .player-list { background: var(--panel); padding:10px; border-radius:8px; color:#fff; font-size:14px; margin-bottom:10px; border:1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
-    .player-list span { color:var(--accent-color); font-weight:700; }
-    #map-status { position:absolute; top:20px; right:20px; z-index:40; background: var(--panel); color:#fff; padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.12); font-size:14px; opacity:0; transform: translateY(-8px); transition: opacity .25s ease, transform .25s ease; pointer-events:none; }
-    #map-status.show { opacity:1; transform: translateY(0); }
-    #speech-layer { position:absolute; inset:0; z-index:45; pointer-events:none; overflow:hidden; }
-    .npc-speech { position:absolute; transform: translate(-50%,-100%); background: rgba(20,20,20,.82); color:#fff; padding:6px 10px; border-radius:999px; font-size:13px; white-space:nowrap; border:1px solid rgba(255,255,255,.12); opacity:0; transition: opacity .2s ease, transform .2s ease; box-shadow:0 6px 20px rgba(0,0,0,.25); }
-    .npc-speech.show { opacity:1; }
-    .npc-speech::after { content:""; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; background: rgba(20,20,20,.82); border-right:1px solid rgba(255,255,255,.12); border-bottom:1px solid rgba(255,255,255,.12); transform: translateX(-50%) rotate(45deg); }
-    #btn-exit { position:absolute; top:20px; right:20px; z-index:40; padding:10px 20px; background:#ff3366; color:#fff; border:none; border-radius:8px; font-weight:700; pointer-events:auto; cursor:pointer; }
-
-    .mobile-controls { position:absolute; bottom:30px; width:100%; display:none; flex-direction:column; align-items:center; gap:12px; z-index:40; pointer-events:none; }
-    .controls-row { display:flex; gap:12px; justify-content:center; width:100%; }
-    .control-btn { width:72px; height:72px; background: rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.3); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:28px; color:#fff; pointer-events:auto; backdrop-filter: blur(5px); transition: background-color .2s, transform .1s; }
-    .control-btn:active { background: rgba(0,255,136,.4); border-color: var(--accent-color); transform: scale(.9); }
-    .control-btn.small { width:68px; height:68px; font-size:24px; }
-    .mobile-controls .controls-row:first-child { display:none; }
-
-    .hud-bottom { position:absolute; left:20px; bottom:20px; z-index:40; display:flex; flex-direction:column; gap:10px; pointer-events:none; }
-    .hud-pill { background: var(--panel); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:8px 12px; font-size:13px; backdrop-filter: blur(6px); }
-    .fart-particle { pointer-events:none; }
-
-    #network-status {
-        position:absolute;
-        top:20px;
-        right:20px;
-        z-index:40;
-        background: var(--panel);
-        color:#fff;
-        padding:10px 14px;
-        border-radius:10px;
-        border:1px solid rgba(255,255,255,.12);
-        font-size:14px;
-        backdrop-filter: blur(6px);
-        pointer-events:none;
+    html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(180deg,#0a1730 0%,#17284a 40%,#8bc7ff 100%);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text);touch-action:none;}
+    #wrap{position:fixed;inset:0;display:flex;align-items:stretch;justify-content:center}
+    canvas{width:100%;height:100%;display:block}
+    .hud{position:fixed;left:12px;right:12px;top:12px;display:flex;gap:10px;justify-content:space-between;pointer-events:none;z-index:6}
+    .pill{pointer-events:auto;background:var(--panel);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.08);box-shadow:var(--shadow);border-radius:999px;padding:10px 14px;font-weight:700;font-size:13px}
+    .pill small{display:block;color:var(--muted);font-weight:600;font-size:11px;line-height:1.15}
+    .status{display:flex;gap:8px;align-items:center}
+    .dot{width:10px;height:10px;border-radius:50%;background:#999;box-shadow:0 0 0 4px rgba(255,255,255,.08) inset}
+    .dot.on{background:var(--accent2)}
+    .dot.off{background:var(--danger)}
+    .panel{position:fixed;left:12px;bottom:12px;right:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;z-index:7}
+    .btn{background:var(--panel2);border:1px solid rgba(255,255,255,.09);color:var(--text);box-shadow:var(--shadow);border-radius:18px;padding:14px 12px;font-weight:800;font-size:15px;min-height:54px;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+    .btn:active{transform:translateY(1px) scale(.99)}
+    .btn.primary{background:linear-gradient(135deg,#2f89ff,#5bd7ff)}
+    .btn.green{background:linear-gradient(135deg,#2ed47a,#8be98b)}
+    .btn.red{background:linear-gradient(135deg,#ff6b6b,#ff8f7a)}
+    .joystick{position:fixed;left:14px;bottom:92px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);box-shadow:var(--shadow);z-index:8;touch-action:none}
+    .stick{position:absolute;left:50%;top:50%;width:58px;height:58px;margin-left:-29px;margin-top:-29px;border-radius:50%;background:rgba(255,255,255,.76);box-shadow:0 10px 25px rgba(0,0,0,.25)}
+    .modal{position:fixed;inset:0;background:rgba(3,8,18,.78);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:center;z-index:12;padding:16px}
+    .card{width:min(560px,100%);background:rgba(12,18,34,.92);border:1px solid rgba(255,255,255,.1);border-radius:28px;box-shadow:var(--shadow);padding:18px}
+    h1{margin:0 0 6px;font-size:28px;line-height:1.1}
+    .sub{margin:0 0 18px;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 16px}
+    .char{padding:14px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.08);cursor:pointer;min-height:92px}
+    .char.sel{outline:2px solid var(--accent);box-shadow:0 0 0 6px rgba(75,208,255,.12)}
+    .char .name{font-weight:900;font-size:16px;margin-bottom:4px}
+    .char .meta{color:var(--muted);font-size:12px;line-height:1.35}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .input{flex:1;min-width:150px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:var(--text);border-radius:16px;padding:14px 14px;font-size:15px;outline:none}
+    .tog{display:flex;align-items:center;gap:10px;margin:12px 0;color:var(--muted);font-size:14px}
+    .switch{width:58px;height:34px;border-radius:999px;background:#2e3a50;position:relative;flex:0 0 auto;cursor:pointer}
+    .switch::after{content:"";position:absolute;top:4px;left:4px;width:26px;height:26px;border-radius:50%;background:white;transition:.18s ease}
+    .switch.on{background:linear-gradient(135deg,#2ed47a,#8be98b)}
+    .switch.on::after{left:28px}
+    .tiny{font-size:12px;color:var(--muted);line-height:1.45}
+    .hide{display:none !important}
+    .toast{position:fixed;left:50%;bottom:210px;transform:translateX(-50%);background:rgba(0,0,0,.55);padding:10px 14px;border-radius:999px;font-weight:700;font-size:13px;z-index:20;opacity:0;transition:opacity .25s ease}
+    .toast.show{opacity:1}
+    @media (max-width:560px){
+      .grid{grid-template-columns:1fr 1fr}
+      .panel{grid-template-columns:1fr 1fr 1fr}
+      .joystick{width:126px;height:126px}
+      .stick{width:52px;height:52px;margin-left:-26px;margin-top:-26px}
+      h1{font-size:24px}
     }
-    #network-status strong { color: var(--accent-color); }
-    .player-list { line-height: 1.45; }
-    .player-row {
-        display:flex;
-        align-items:center;
-        gap:8px;
-        margin-top:4px;
-        white-space:nowrap;
-    }
-    .player-dot {
-        width:10px;
-        height:10px;
-        border-radius:50%;
-        box-shadow:0 0 10px rgba(255,255,255,.2);
-        flex:0 0 auto;
-    }
-    #joystick-area {
-        position:absolute;
-        left:22px;
-        bottom:22px;
-        width:150px;
-        height:150px;
-        z-index:45;
-        pointer-events:none;
-    }
-    #joystick-base {
-        position:absolute;
-        inset:0;
-        border-radius:50%;
-        background: rgba(255,255,255,.08);
-        border:2px solid rgba(255,255,255,.18);
-        backdrop-filter: blur(6px);
-        pointer-events:auto;
-        touch-action:none;
-    }
-    #joystick-stick {
-        position:absolute;
-        left:50%;
-        top:50%;
-        width:62px;
-        height:62px;
-        border-radius:50%;
-        transform: translate(-50%,-50%);
-        background: rgba(0,255,136,.42);
-        border:2px solid rgba(0,255,136,.8);
-        box-shadow:0 0 18px rgba(0,255,136,.28);
-        pointer-events:none;
-        transition: transform .05s linear;
-    }
-
-    .join-panel {
-        display: grid;
-        grid-template-columns: 1fr 1fr auto;
-        gap: 12px;
-        align-items: end;
-        margin: 18px 0 28px;
-        padding: 16px;
-        background: rgba(255,255,255,.05);
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 18px;
-        backdrop-filter: blur(8px);
-    }
-    .join-field {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .join-field label {
-        font-size: 12px;
-        color: var(--text-muted);
-        font-weight: 700;
-        letter-spacing: .4px;
-    }
-    .join-field input {
-        border: 1px solid rgba(255,255,255,.12);
-        background: rgba(0,0,0,.28);
-        color: white;
-        padding: 12px 14px;
-        border-radius: 12px;
-        outline: none;
-        font-size: 15px;
-    }
-    .join-field input:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 3px rgba(0,255,136,.12);
-    }
-    .join-button {
-        border: none;
-        background: linear-gradient(135deg, var(--accent-color), #00b8ff);
-        color: #04130b;
-        font-weight: 900;
-        padding: 13px 18px;
-        border-radius: 12px;
-        cursor: pointer;
-        min-width: 140px;
-    }
-    .join-tip {
-        margin-top: 8px;
-        color: var(--text-muted);
-        font-size: 13px;
-    }
-    .join-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .server-list-wrap {
-        margin-top: 18px;
-        padding: 16px;
-        background: rgba(255,255,255,.04);
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 18px;
-        backdrop-filter: blur(8px);
-    }
-    .server-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-    }
-    .server-card {
-        border: 1px solid rgba(255,255,255,.09);
-        background: rgba(0,0,0,.22);
-        border-radius: 16px;
-        padding: 14px;
-        text-align: left;
-        color: var(--text-main);
-        cursor: pointer;
-        transition: transform .18s ease, border-color .18s ease, background .18s ease;
-    }
-    .server-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--accent-color);
-        background: rgba(0,255,136,.08);
-    }
-    .server-card.active {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 2px rgba(0,255,136,.12) inset;
-    }
-    .server-card-top {
-        display:flex;
-        justify-content:space-between;
-        gap:10px;
-        align-items:center;
-        margin-bottom:6px;
-    }
-    .server-name {
-        font-size: 17px;
-        font-weight: 800;
-    }
-    .server-meta {
-        color: var(--text-muted);
-        font-size: 13px;
-        line-height: 1.35;
-    }
-    .server-pill {
-        font-size: 12px;
-        padding: 4px 9px;
-        border-radius: 999px;
-        background: rgba(255,255,255,.08);
-        color: #fff;
-        white-space: nowrap;
-    }
-    @media (max-width: 760px) {
-        .join-panel { grid-template-columns: 1fr; }
-        .join-button { width: 100%; }
-    }
-
-</style>
+  </style>
 </head>
 <body>
-<div id="hub-container">
-    <nav class="navbar">
-        <div class="brand-container">
-            <div class="logo">NG</div>
-            <div class="brand-name">NovaGo Hub</div>
-        </div>
-        <div class="user-profile">
-            <div class="avatar">E</div>
-            <span>Ege</span>
-        </div>
-    </nav>
-    <main class="main-container">
-        <div class="join-panel">
-            <div class="join-field">
-                <label for="player-name-input">İsim</label>
-                <input id="player-name-input" type="text" maxlength="16" value="Ege" autocomplete="nickname">
-            </div>
-            <div class="join-field">
-                <label for="room-name-input">Sunucu Kodu</label>
-                <input id="room-name-input" type="text" maxlength="16" value="main" autocomplete="off" placeholder="main">
-            </div>
-            <div class="join-actions">
-                <button class="join-button" id="btn-create-room" onclick="createRoom()">Sunucu Ekle</button>
-                <button class="join-button" id="btn-join-room" onclick="joinServer()">Sunucuya Gir</button>
-            </div>
-        </div>
-        <div class="join-tip">Aynı sunucu kodunu yazan herkes aynı dünyaya girer. Yeni bir kod yazıp “Sunucu Ekle” ile oluşturabilirsin.</div>
-        <div class="server-list-wrap">
-            <div class="section-title" style="margin:10px 0 14px; font-size:22px;">🛰️ Sunucular</div>
-            <div id="server-list" class="server-list"></div>
-        </div>
-        <h2 class="section-title">🔥 Öne Çıkan Deneyimler</h2>
-        <div class="games-grid">
-            <div class="game-card" onclick="joinServer()">
-                <div class="game-thumbnail">🌍<div class="play-btn-overlay">▶</div></div>
-                <div class="game-info">
-                    <div class="game-title">Ege'nin 3D Dünyası</div>
-                    <div class="game-developer">Geliştirici: Ege</div>
-                    <div style="color: var(--accent-color); margin-top:10px; font-weight:bold;">🟢 Sunucu Çevrimiçi - Tıkla ve Katıl</div>
-                </div>
-            </div>
-        </div>
-    </main>
+<div id="wrap"><canvas id="game"></canvas></div>
+
+<div class="hud">
+  <div class="pill"><small>Harita</small><span id="coords">X: 0 Y: 0</span></div>
+  <div class="pill"><small>Blok</small><span id="blocks">0 / 300+</span></div>
+  <div class="pill status"><span id="netDot" class="dot off"></span><span id="netText">Offline</span></div>
 </div>
 
-<div id="game-container">
-    <div id="loading-screen">
-        <div class="spinner"></div>
-        <div id="loading-text">Sunucuya Bağlanılıyor...</div>
-        <div id="server-logs"><p>Uzak sunucu IP'si aranıyor...</p></div>
-    </div>
-
-    <div id="canvas-container" style="width:100%;height:100%;"></div>
-    <div id="startup-fallback" style="position:absolute;left:20px;bottom:20px;z-index:50;background:rgba(0,0,0,.45);padding:10px 12px;border-radius:10px;font-size:13px;color:#fff;pointer-events:none;">WebGL başlatılıyor...</div>
-    <div id="game-ui" style="display:none;">
-        <div class="player-list">
-            👥 Aktif Oyuncular: <strong><span id="active-count">1</span></strong><br>
-            <div id="players-list" style="margin-top:6px;"></div>
-        </div>
-    </div>
-    <div id="speech-layer"></div>
-    <div id="map-status">Harita yükleniyor...</div>
-    <div id="network-status">Bağlantı hazırlanıyor...</div>
-    <div id="joystick-area">
-        <div id="joystick-base"><div id="joystick-stick"></div></div>
-    </div>
-    <div class="hud-bottom">
-        <div class="hud-pill">WASD / Ok tuşları: hareket • Space: zıpla • F / 💨: osur</div>
-        <div class="hud-pill">Harita yürüdükçe yüklenir ve uzaktakiler silinir</div>
-    </div>
-    <button id="btn-exit" style="display:none;" onclick="exitGame()">Oyundan Çık</button>
-
-    <div class="mobile-controls" id="mobile-controls">
-        <div class="controls-row">
-            <div class="control-btn small" id="btn-left">⬅️</div>
-            <div class="control-btn small" id="btn-forward">⬆️</div>
-            <div class="control-btn small" id="btn-right">➡️</div>
-        </div>
-        <div class="controls-row">
-            <div class="control-btn small" id="btn-back">⬇️</div>
-            <div class="control-btn small" id="btn-fart">💨</div>
-            <div class="control-btn small" id="btn-jump">⏫</div>
-        </div>
-    </div>
+<div class="joystick" id="joy"><div class="stick" id="stick"></div></div>
+<div class="panel">
+  <div class="btn" id="leftBtn">◀ Sol</div>
+  <div class="btn green" id="jumpBtn">⤒ Zıpla</div>
+  <div class="btn" id="rightBtn">Sağ ▶</div>
+  <div class="btn primary" id="fastBtn">Hızlı Mod: Açık</div>
+  <div class="btn" id="placeBtn">+ Blok</div>
+  <div class="btn red" id="breakBtn">⛏ Kır</div>
 </div>
 
-<script>
-const hubContainer = document.getElementById('hub-container');
-const gameContainer = document.getElementById('game-container');
-const loadingScreen = document.getElementById('loading-screen');
-const loadingText = document.getElementById('loading-text');
-const serverLogs = document.getElementById('server-logs');
-const mobileControls = document.getElementById('mobile-controls');
-const btnExit = document.getElementById('btn-exit');
-const gameUI = document.getElementById('game-ui');
-const mapStatus = document.getElementById('map-status');
-const speechLayer = document.getElementById('speech-layer');
-const nameInput = document.getElementById('player-name-input');
-const roomInput = document.getElementById('room-name-input');
-const joinRoomBtn = document.getElementById('btn-join-room');
-const createRoomBtn = document.getElementById('btn-create-room');
-const serverListEl = document.getElementById('server-list');
-const profileName = document.querySelector('.user-profile span');
-const profileAvatar = document.querySelector('.avatar');
-const activeCountEl = document.getElementById('active-count');
-const playersListEl = document.getElementById('players-list');
+<div class="toast" id="toast"></div>
 
-const btnFwd = document.getElementById('btn-forward');
-const btnBack = document.getElementById('btn-back');
-const btnLeft = document.getElementById('btn-left');
-const btnRight = document.getElementById('btn-right');
-const btnFart = document.getElementById('btn-fart');
-const btnJmp = document.getElementById('btn-jump');
+<div class="modal" id="startModal">
+  <div class="card">
+    <h1>BloxCraft Mobile</h1>
+    <p class="sub">Minecraft hissi, fizik, telefon için kontroller ve Firebase çok oyunculu oda sistemi.</p>
+    <div class="grid" id="chars">
+      <div class="char sel" data-char="0"><div class="name">Lina</div><div class="meta">Hızlı, çevik, mavi tema</div></div>
+      <div class="char" data-char="1"><div class="name">Mira</div><div class="meta">Zıplaması rahat, pembe tema</div></div>
+      <div class="char" data-char="2"><div class="name">Arda</div><div class="meta">Dengeli, yeşil tema</div></div>
+      <div class="char" data-char="3"><div class="name">Kaan</div><div class="meta">Güçlü his, turuncu tema</div></div>
+    </div>
+    <div class="row">
+      <input class="input" id="nameInput" maxlength="14" placeholder="İsmini yaz" />
+      <input class="input" id="roomInput" maxlength="18" placeholder="Oda kodu: blox1" value="blox1" />
+    </div>
+    <div class="tog"><div id="fastSwitch" class="switch on"></div><div>Hızlı mod açık: daha akıcı hareket ve daha hızlı yükleme</div></div>
+    <div class="row">
+      <button class="btn primary" id="startBtn" style="flex:1">Oyuna Başla</button>
+    </div>
+    <p class="tiny">Multiplayer için Firestore’da <b>rooms</b> koleksiyonu kullanılır. Aynı oda kodunu giren herkes birbirini görür.</p>
+  </div>
+</div>
 
-let moveForward = false, moveBack = false, moveLeft = false, moveRight = false;
-let gameActive = false;
-let scene, camera, renderer;
-let player, playerBody, playerHead, playerArms = [], playerLegs = [];
-let velocityY = 0, gravity = -0.015, jumpPower = 0.36, isGrounded = false;
-let moveSpeed = 0.12, runMultiplier = 1.6, isRunning = false;
-let cameraDistance = 8, cameraHeight = 4;
-let viewYaw = Math.PI;          // kameranın başlangıç yönü
-let viewPitch = -0.18;          // hafif yukarıdan bakış
-let maxPitchDown = -0.65;
-let maxPitchUp = 0.95;
-let lookDragging = false;
-let lookPointerId = null;
-let lookLastX = 0;
-let lookLastY = 0;
-let animationId;
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-analytics.js";
+  import {
+    getFirestore, doc, collection, setDoc, onSnapshot, deleteDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-let chunks = new Map();
-let chunkEntities = new Map();
-let npcs = [];
-let fartParticles = [];
-let destructibles = [];
-let lastFartAt = 0;
-let worldTime = 0;
-let lastPlayerYaw = 0;
-let sunLight, hemiLight;
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRCcRCrk9pPvPUWz0FfsDmX_qhkZUEGreI",
+    authDomain: "bloxcraft-876a5.firebaseapp.com",
+    projectId: "bloxcraft-876a5",
+    storageBucket: "bloxcraft-876a5.firebasestorage.app",
+    messagingSenderId: "222681865370",
+    appId: "1:222681865370:web:ba627b583d7346d5395323",
+    measurementId: "G-GT3F0Z380E"
+  };
 
-// --- Firebase / Multiplayer ---
-const firebaseConfig = {
-    apiKey: "AIzaSyA3r0cvDZ5R6nyjN0UKW8zy_cbuvx8YhKM",
-    authDomain: "traffic-8da63.firebaseapp.com",
-    databaseURL: "https://traffic-8da63-default-rtdb.firebaseio.com",
-    projectId: "traffic-8da63",
-    storageBucket: "traffic-8da63.firebasestorage.app",
-    messagingSenderId: "295572062519",
-    appId: "1:295572062519:web:ec0c1a639c63ceda139ab2",
-    measurementId: "G-YFKSQWS0F7"
-};
-let fbApp = null;
-let fbDb = null;
-let fbAuth = null;
-let playersRef = null;
-let connectedRef = null;
-let meRef = null;
-let roomsRef = null;
-let roomMetaRef = null;
-let firebaseReady = false;
-let firebaseInitPromise = null;
-let authUser = null;
-let savedRoom = localStorage.getItem('novago_room') || 'main';
-let roomId = normalizeRoomCode(savedRoom);
-let playerName = localStorage.getItem('novago_name') || 'Ege';
-const playerId = `p_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}`;
-const remotePlayers = new Map();
-let localLastSync = 0;
-let lastSentFartAt = 0;
-let firebaseRoomsCache = {};
-let multiplayerMode = 'firebase';
-let localChannel = null;
-let localPresenceTimer = null;
-let localPruneTimer = null;
-let localStorageListenerInstalled = false;
-const LOCAL_PEER_TTL = 4500;
+  let app, db = null;
+  try {
+    app = initializeApp(firebaseConfig);
+    try { getAnalytics(app); } catch (_) {}
+    db = getFirestore(app);
+  } catch (e) {
+    console.warn('Firebase init failed, offline mode only.', e);
+  }
 
-// joystick
-let joystickX = 0;
-let joystickY = 0;
-let joystickActive = false;
-let joystickPointerId = null;
-let joystickCenter = { x: 0, y: 0 };
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const coordsEl = document.getElementById('coords');
+  const blocksEl = document.getElementById('blocks');
+  const netDot = document.getElementById('netDot');
+  const netText = document.getElementById('netText');
+  const toast = document.getElementById('toast');
+  const modal = document.getElementById('startModal');
+  const startBtn = document.getElementById('startBtn');
+  const fastBtn = document.getElementById('fastBtn');
+  const fastSwitch = document.getElementById('fastSwitch');
+  const roomInput = document.getElementById('roomInput');
+  const nameInput = document.getElementById('nameInput');
+  const chars = [...document.querySelectorAll('.char')];
+  const joy = document.getElementById('joy');
+  const stick = document.getElementById('stick');
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const jumpBtn = document.getElementById('jumpBtn');
+  const placeBtn = document.getElementById('placeBtn');
+  const breakBtn = document.getElementById('breakBtn');
 
-const CHUNK_SIZE = 24;
-const CHUNK_RADIUS = 1;
-const WORLD_SEED = 1337;
-const MEETING_POINT = { x: 0, y: 1, z: 0 };
+  const CHARSET = [
+    {name:'Lina', shirt:'#4bd0ff', hair:'#2b2d52', skin:'#f6c7a2'},
+    {name:'Mira', shirt:'#ff78b2', hair:'#5b3354', skin:'#f2c9ab'},
+    {name:'Arda', shirt:'#7cf28a', hair:'#3d2f24', skin:'#e8bd97'},
+    {name:'Kaan', shirt:'#ffb05a', hair:'#1f1f1f', skin:'#efc39c'},
+  ];
 
-function seedFromCoords(x, z, extra = 0) {
-    const s = Math.sin(x * 9283.17 + z * 1931.11 + WORLD_SEED + extra * 53.1) * 10000;
-    return s - Math.floor(s);
-}
-function randBetween(x, z, min, max, offset = 0) { return min + seedFromCoords(x + offset, z - offset, offset) * (max - min); }
-function pickSeeded(list, x, z, extra = 0) {
-    return list[Math.floor(seedFromCoords(x, z, extra) * list.length) % list.length];
-}
-function seededInt(x, z, min, max, extra = 0) {
-    return min + Math.floor(seedFromCoords(x, z, extra) * (max - min + 1));
-}
-function showMapStatus(text) {
-    mapStatus.textContent = text;
-    mapStatus.classList.add('show');
-    clearTimeout(showMapStatus._timer);
-    showMapStatus._timer = setTimeout(() => mapStatus.classList.remove('show'), 1100);
-}
+  const WORLD = {
+    seed: 73.17,
+    blockSize: 32,
+    chunkSize: 16,
+    renderRadius: 26,      // chunks to each side
+    trimBehindBlocks: 300, // user request
+    trimAheadBlocks: 360,
+  };
 
-function setNetworkStatus(text) {
-    const el = document.getElementById('network-status');
-    if (el) el.innerHTML = text;
-}
+  const input = {left:false,right:false,jump:false,place:false,break:false,joyX:0,joyY:0};
+  let fastMode = true;
+  let selectedChar = 0;
+  let started = false;
+  let t = 0;
+  let uid = localStorage.getItem('blox_uid') || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+  localStorage.setItem('blox_uid', uid);
+  let playerName = '';
+  let roomId = 'blox1';
+  let unsubPlayers = null;
+  let remotePlayers = {};
+  let syncTimer = null;
+  let myDocRef = null;
 
+  const player = {
+    x: 8 * WORLD.blockSize,
+    y: 8 * WORLD.blockSize,
+    w: 22,
+    h: 34,
+    vx: 0,
+    vy: 0,
+    onGround: false,
+    dir: 1,
+    skin: CHARSET[0],
+    blocksPlaced: 0,
+  };
 
-function normalizeRoomCode(value) {
-    return String(value || 'main').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 16) || 'main';
-}
+  const camera = {x:0,y:0};
+  const chunks = new Map();
+  const blocks = new Map();
+  const blockCountEl = document.getElementById('blocks');
+  const gravity = 1900;
 
-function normalizePlayerName(value) {
-    return String(value || 'Ege').trim().replace(/\s+/g, ' ').slice(0, 16) || 'Ege';
-}
+  function resize(){
+    const dpr = Math.max(1, Math.min(2, devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    canvas.style.width = innerWidth + 'px';
+    canvas.style.height = innerHeight + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+  resize();
 
-function syncLobbyInfo() {
-    if (profileName) profileName.textContent = playerName;
-    if (profileAvatar) profileAvatar.textContent = (playerName[0] || 'E').toUpperCase();
-    if (nameInput) nameInput.value = playerName;
-}
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=>toast.classList.remove('show'), 1500);
+  }
 
-function loadLocalRoomIndex() {
-    try {
-        const raw = localStorage.getItem('novago_room_index');
-        const parsed = raw ? JSON.parse(raw) : {};
-        return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch (_) {
-        return {};
+  function hash2(x, y){
+    let n = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.floor(WORLD.seed * 1000);
+    n = (n ^ (n >>> 13)) * 1274126177;
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+  }
+  function smoothstep(a,b,t){ const u = Math.max(0, Math.min(1,(t-a)/(b-a))); return u*u*(3-2*u); }
+  function terrainHeight(blockX){
+    const base = 11;
+    const wave = Math.sin(blockX * 0.06) * 2.5 + Math.sin(blockX * 0.017) * 5.5;
+    const bumps = (hash2(Math.floor(blockX/8), 0) - 0.5) * 6;
+    return Math.floor(base + wave + bumps);
+  }
+  function key(x,y){ return x + ',' + y; }
+
+  function generateChunk(cx){
+    if (chunks.has(cx)) return;
+    const startX = cx * WORLD.chunkSize;
+    for (let lx=0; lx<WORLD.chunkSize; lx++){
+      const bx = startX + lx;
+      const h = terrainHeight(bx);
+      for (let by = h; by < h + 4; by++) addBlock(bx, by, by === h ? 1 : 2);
+      // small floating details
+      if (hash2(bx, 99) > 0.965) addBlock(bx, h - 2, 3);
+      if (hash2(bx, 77) > 0.985) addBlock(bx, h - 3, 4);
     }
-}
+    chunks.set(cx, true);
+  }
 
-function saveLocalRoomIndex(index) {
-    try {
-        localStorage.setItem('novago_room_index', JSON.stringify(index || {}));
-    } catch (_) {}
-}
+  function addBlock(x,y,type=1){ blocks.set(key(x,y), {x,y,type}); }
+  function removeBlock(x,y){ blocks.delete(key(x,y)); }
+  function hasBlock(x,y){ return blocks.has(key(x,y)); }
 
-function upsertLocalRoom(code, meta = {}) {
-    const roomCode = normalizeRoomCode(code);
-    const index = loadLocalRoomIndex();
-    index[roomCode] = {
-        meta: {
-            code: roomCode,
-            displayName: meta.displayName || makeRoomDisplayName(roomCode),
-            updatedAt: meta.updatedAt || Date.now(),
-            createdBy: meta.createdBy || 'local'
+  function ensureWorldAround(px){
+    const pBlock = Math.floor(px / WORLD.blockSize);
+    const minBlock = pBlock - WORLD.trimBehindBlocks;
+    const maxBlock = pBlock + WORLD.trimAheadBlocks;
+    const minChunk = Math.floor(minBlock / WORLD.chunkSize) - 2;
+    const maxChunk = Math.floor(maxBlock / WORLD.chunkSize) + 2;
+    for (let cx = minChunk; cx <= maxChunk; cx++) generateChunk(cx);
+    for (const [cx] of chunks){
+      const chunkStart = cx * WORLD.chunkSize;
+      const chunkEnd = chunkStart + WORLD.chunkSize - 1;
+      if (chunkEnd < minBlock - WORLD.chunkSize || chunkStart > maxBlock + WORLD.chunkSize){
+        // remove only generated blocks for this chunk
+        for (let lx=0; lx<WORLD.chunkSize; lx++){
+          const bx = chunkStart + lx;
+          for (let by = 0; by < 40; by++) blocks.delete(key(bx, by));
         }
-    };
-    saveLocalRoomIndex(index);
-    return index;
-}
-
-function getMergedRoomMap(remoteRooms = {}) {
-    const merged = { ...loadLocalRoomIndex(), ...(remoteRooms || {}) };
-    const currentCode = normalizeRoomCode(roomId || (roomInput && roomInput.value) || 'main');
-    if (!merged[currentCode]) {
-        merged[currentCode] = {
-            meta: {
-                code: currentCode,
-                displayName: makeRoomDisplayName(currentCode),
-                updatedAt: Date.now(),
-                createdBy: 'local'
-            }
-        };
+        chunks.delete(cx);
+      }
     }
-    return merged;
-}
-function syncRoomLobbyInfo() {
-    if (roomInput) roomInput.value = roomId;
-    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: 'local' });
-}
-
-function makeRoomDisplayName(code) {
-    const raw = String(code || 'main').trim();
-    return raw ? raw.replace(/[_-]+/g, ' ').replace(/\b\w/g, s => s.toUpperCase()) : 'Main';
-}
-
-function getRoomCodeFromInput() {
-    const saved = localStorage.getItem('novago_room') || 'main';
-    return normalizeRoomCode(roomInput ? roomInput.value : saved);
-}
-
-function setSelectedRoom(code) {
-    roomId = normalizeRoomCode(code);
-    if (roomInput) roomInput.value = roomId;
-    try {
-        localStorage.setItem('novago_room', roomId);
-    } catch (e) {}
-    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: authUser ? authUser.uid : 'local' });
-    syncRoomLobbyInfo();
-    renderServerList(firebaseRoomsCache);
-}
-
-async function createRoom() {
-    const nextRoom = getRoomCodeFromInput() || ('room-' + Math.random().toString(36).slice(2, 6));
-    setSelectedRoom(nextRoom);
-    upsertLocalRoom(roomId, { displayName: makeRoomDisplayName(roomId), updatedAt: Date.now(), createdBy: authUser ? authUser.uid : 'local' });
-    renderServerList(firebaseRoomsCache);
-    try {
-        await initFirebaseCore();
-        roomMetaRef = fbDb.ref(`rooms/${roomId}/meta`);
-        await roomMetaRef.update({
-            code: roomId,
-            displayName: makeRoomDisplayName(roomId),
-            updatedAt: Date.now(),
-            createdBy: authUser ? authUser.uid : null
-        });
-        if (!roomsRef) {
-            roomsRef = fbDb.ref('rooms');
-            roomsRef.on('value', snap => {
-                firebaseRoomsCache = snap.val() || {};
-                renderServerList(firebaseRoomsCache);
-            });
-        }
-        firebaseRoomsCache = (await fbDb.ref('rooms').once('value')).val() || {};
-        renderServerList(firebaseRoomsCache);
-    } catch (err) {
-        console.warn('createRoom failed:', err);
-    }
-    if (serverLogs) {
-        serverLogs.innerHTML = `<p>Sunucu hazır: ${roomId}</p><p>İstersen şimdi girip açabilirsin.</p>`;
-    }
-    if (serverListEl) {
-        const existing = serverListEl.querySelector(`[data-room="${roomId}"]`);
-        if (existing) existing.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-}
-
-
-
-if (nameInput) {
-    nameInput.addEventListener('input', () => {
-        playerName = normalizePlayerName(nameInput.value);
-        syncLobbyInfo();
-    });
-}
-if (roomInput) {
-    roomInput.addEventListener('input', () => {
-        roomId = normalizeRoomCode(roomInput.value);
-    });
-}
-
-window.addEventListener('error', (event) => {
-    try {
-        const msg = event && event.error ? (event.error.stack || event.error.message || String(event.error)) : (event.message || 'Bilinmeyen hata');
-        console.error('Global error:', msg);
-        if (serverLogs) serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${msg}</p>`;
-        if (loadingScreen) loadingScreen.style.display = 'none';
-        if (gameContainer) gameContainer.style.display = 'block';
-    } catch (_) {}
-});
-window.addEventListener('unhandledrejection', (event) => {
-    try {
-        const msg = event && event.reason ? (event.reason.stack || event.reason.message || String(event.reason)) : 'Unhandled rejection';
-        console.error('Unhandled rejection:', msg);
-        if (serverLogs) serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${msg}</p>`;
-        if (loadingScreen) loadingScreen.style.display = 'none';
-        if (gameContainer) gameContainer.style.display = 'block';
-    } catch (_) {}
-});
-
-syncLobbyInfo();
-syncRoomLobbyInfo();
-renderServerList(firebaseRoomsCache);
-initLobbyBrowser().catch(() => {});
-function refreshPlayerHud(players) {
-    const activeCount = activeCountEl || document.getElementById('active-count');
-    const list = playersListEl || document.getElementById('players-list');
-    if (!activeCount || !list) return;
-
-    const entries = Object.entries(players || {});
-    activeCount.textContent = String(entries.length);
-
-    list.innerHTML = entries.length
-        ? entries.map(([id, p]) => {
-            const color = p.color || '#ffffff';
-            const name = p.name || 'Oyuncu';
-            const meTag = id === playerId ? ' <span style="color:var(--accent-color)">(Sen)</span>' : '';
-            return `<div class="player-row"><span class="player-dot" style="background:${color}"></span><span style="color:${color}">${name}</span>${meTag}</div>`;
-        }).join('')
-        : '<div style="color:var(--text-muted)">Kimse yok</div>';
-}
-
-
-function renderServerList(rooms) {
-    if (!serverListEl) return;
-    const mergedRooms = getMergedRoomMap(rooms || {});
-    const entries = Object.entries(mergedRooms).map(([code, room]) => {
-        const players = room && room.players ? Object.values(room.players) : [];
-        const activePlayers = players.filter(p => p && p.name).length;
-        const displayName = (room && room.meta && room.meta.displayName) ? room.meta.displayName : makeRoomDisplayName(code);
-        const lastSeen = room && room.meta && room.meta.updatedAt ? room.meta.updatedAt : 0;
-        const isActive = activePlayers > 0;
-        const activeClass = code === roomId ? ' active' : '';
-        const subtitle = isActive
-            ? `${activePlayers} oyuncu • canlı`
-            : 'boş oda';
-        return `
-            <button class="server-card${activeClass}" data-room="${code}" onclick="setSelectedRoom('${code}')" type="button">
-                <div class="server-card-top">
-                    <div class="server-name">${displayName}</div>
-                    <div class="server-pill">${isActive ? 'Aktif' : 'Pasif'}</div>
-                </div>
-                <div class="server-meta">Kod: <strong>${code}</strong><br>${subtitle}${lastSeen ? `<br>Güncel: ${new Date(lastSeen).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}` : ''}</div>
-            </button>`;
-    });
-
-    serverListEl.innerHTML = entries.length
-        ? entries.join('')
-        : '<div style="color:var(--text-muted)">Henüz sunucu yok. Bir kod yazıp oluştur.</div>';
-}
-
-function createRemoteAvatar(color = 0x66ccff) {
-    const group = new THREE.Group();
-    const skin = 0xf1c7a1;
-    const shirt = color;
-    const pants = 0x24344f;
-
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 0.6), new THREE.MeshStandardMaterial({ color: shirt }));
-    body.position.y = 1.35;
-    body.castShadow = true;
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshStandardMaterial({ color: skin }));
-    head.position.y = 2.18;
-    head.castShadow = true;
-
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    eye1.position.set(-0.13, 2.2, 0.34);
-    eye2.position.set(0.13, 2.2, 0.34);
-
-    const armGeo = new THREE.BoxGeometry(0.14, 0.78, 0.14);
-    const armMat = new THREE.MeshStandardMaterial({ color: skin });
-    const armL = new THREE.Mesh(armGeo, armMat);
-    const armR = new THREE.Mesh(armGeo, armMat);
-    armL.position.set(-0.58, 1.5, 0);
-    armR.position.set(0.58, 1.5, 0);
-    armL.rotation.z = 0.12;
-    armR.rotation.z = -0.12;
-
-    const legGeo = new THREE.BoxGeometry(0.18, 0.92, 0.18);
-    const legMat = new THREE.MeshStandardMaterial({ color: pants });
-    const legL = new THREE.Mesh(legGeo, legMat);
-    const legR = new THREE.Mesh(legGeo, legMat);
-    legL.position.set(-0.22, 0.42, 0);
-    legR.position.set(0.22, 0.42, 0);
-
-    const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.62, 0.08, 8, 16),
-        new THREE.MeshStandardMaterial({ color: shirt, emissive: shirt, emissiveIntensity: 0.25 })
-    );
-    ring.rotation.x = Math.PI / 2;
-    ring.position.y = 2.78;
-
-    group.add(body, head, eye1, eye2, armL, armR, legL, legR, ring);
-    group.userData.parts = { body, head, armL, armR, legL, legR, ring };
-    return group;
-}
-
-function makeNameTag(text, color = '#ffffff') {
-    const tag = document.createElement('div');
-    tag.className = 'npc-speech';
-    tag.textContent = text;
-    tag.style.color = color;
-    tag.style.fontWeight = '700';
-    tag.style.padding = '5px 10px';
-    tag.style.fontSize = '12px';
-    tag.style.opacity = '1';
-    speechLayer.appendChild(tag);
-    return tag;
-}
-
-function positionTagForObject(tag, object3D, offsetY = 2.5) {
-    if (!tag || !camera) return;
-    const worldPos = new THREE.Vector3();
-    object3D.getWorldPosition(worldPos);
-    const screenPos = worldPos.clone().add(new THREE.Vector3(0, offsetY, 0)).project(camera);
-    const visible = screenPos.z < 1;
-    tag.style.display = visible ? 'block' : 'none';
-    if (!visible) return;
-    tag.style.left = `${(screenPos.x * 0.5 + 0.5) * window.innerWidth}px`;
-    tag.style.top = `${(-screenPos.y * 0.5 + 0.5) * window.innerHeight}px`;
-}
-
-
-
-function getLocalPresenceKey(id = playerId, code = roomId) {
-    return `novago_presence_${normalizeRoomCode(code)}_${id}`;
-}
-
-function getLocalPresencePrefix(code = roomId) {
-    return `novago_presence_${normalizeRoomCode(code)}_`;
-}
-
-function buildPresenceSnapshot() {
-    if (!player || !player.position || !player.rotation) return null;
-    return {
-        name: normalizePlayerName(playerName),
-        x: Number.isFinite(player.position.x) ? player.position.x : 0,
-        y: Number.isFinite(player.position.y) ? player.position.y : 1,
-        z: Number.isFinite(player.position.z) ? player.position.z : 0,
-        yaw: Number.isFinite(player.rotation.y) ? player.rotation.y : 0,
-        color: '#ff3366',
-        fartAt: lastSentFartAt || 0,
-        updatedAt: Date.now(),
-        authUid: authUser ? authUser.uid : null
-    };
-}
-
-function readLocalRoomPresence(code = roomId) {
-    const prefix = getLocalPresencePrefix(code);
-    const now = Date.now();
-    const snapshot = {};
-    try {
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (!key || !key.startsWith(prefix)) continue;
-            const raw = localStorage.getItem(key);
-            if (!raw) continue;
-            try {
-                const data = JSON.parse(raw);
-                const updatedAt = Number(data && data.updatedAt) || 0;
-                if (now - updatedAt <= LOCAL_PEER_TTL) {
-                    const id = key.slice(prefix.length);
-                    if (id) snapshot[id] = data;
-                }
-            } catch (_) {}
-        }
-    } catch (err) {
-        console.warn('readLocalRoomPresence failed:', err);
-    }
-    const me = buildPresenceSnapshot();
-    if (me) snapshot[playerId] = me;
-    return snapshot;
-}
-
-function syncLocalRoomSnapshot() {
-    if (!player || !player.position) return;
-    const snapshot = readLocalRoomPresence(roomId);
-    syncRemotePlayers(snapshot);
-    refreshPlayerHud(snapshot);
-    const count = Object.keys(snapshot).length;
-    setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • ${count > 1 ? 'Buluşma aktif' : 'Bekleniyor'} (yerel)`);
-}
-
-function writeLocalPresence(force = false) {
-    if (multiplayerMode !== 'local' || !player || !player.position) return;
-    const payload = buildPresenceSnapshot();
-    if (!payload) return;
-    payload.updatedAt = Date.now();
-    payload.roomId = roomId;
-    try {
-        localStorage.setItem(getLocalPresenceKey(), JSON.stringify(payload));
-    } catch (err) {
-        console.warn('writeLocalPresence failed:', err);
-    }
-    if (localChannel) {
-        try { localChannel.postMessage({ type: 'state', roomId, playerId, payload }); } catch (_) {}
-    }
-    if (force) syncLocalRoomSnapshot();
-}
-
-function broadcastLocalFart() {
-    if (multiplayerMode !== 'local' || !player || !player.position) return;
-    const payload = buildPresenceSnapshot();
-    if (!payload) return;
-    payload.fartAt = lastSentFartAt;
-    payload.updatedAt = Date.now();
-    payload.roomId = roomId;
-    try {
-        localStorage.setItem(getLocalPresenceKey(), JSON.stringify(payload));
-    } catch (err) {
-        console.warn('broadcastLocalFart failed:', err);
-    }
-    if (localChannel) {
-        try { localChannel.postMessage({ type: 'fart', roomId, playerId, payload }); } catch (_) {}
-    }
-    syncLocalRoomSnapshot();
-}
-
-function cleanupLocalMultiplayer() {
-    try {
-        if (localPresenceTimer) clearInterval(localPresenceTimer);
-    } catch (_) {}
-    try {
-        if (localPruneTimer) clearInterval(localPruneTimer);
-    } catch (_) {}
-    localPresenceTimer = null;
-    localPruneTimer = null;
-    try {
-        if (localChannel) localChannel.close();
-    } catch (_) {}
-    localChannel = null;
-    try {
-        if (localStorageListenerInstalled) window.removeEventListener('storage', onLocalStorageEvent);
-    } catch (_) {}
-    localStorageListenerInstalled = false;
-    try {
-        localStorage.removeItem(getLocalPresenceKey());
-    } catch (_) {}
-}
-
-function onLocalStorageEvent(e) {
-    if (!e || !e.key) return;
-    if (!e.key.startsWith(getLocalPresencePrefix())) return;
-    syncLocalRoomSnapshot();
-}
-
-function initLocalMultiplayer() {
-    multiplayerMode = 'local';
-    firebaseReady = false;
-    setNetworkStatus(`Çevrim içi: <strong>yerel</strong> • ${playerName}`);
-    syncRoomLobbyInfo();
-
-    if (!localStorageListenerInstalled) {
-        window.addEventListener('storage', onLocalStorageEvent);
-        localStorageListenerInstalled = true;
-    }
-
-    if (typeof BroadcastChannel !== 'undefined') {
-        try {
-            localChannel = new BroadcastChannel(`novago_${normalizeRoomCode(roomId)}`);
-            localChannel.onmessage = (ev) => {
-                const msg = ev && ev.data;
-                if (!msg || msg.roomId !== roomId || msg.playerId === playerId) return;
-                if (msg.type === 'state' || msg.type === 'fart') {
-                    syncLocalRoomSnapshot();
-                }
-            };
-        } catch (err) {
-            console.warn('BroadcastChannel unavailable:', err);
-            localChannel = null;
-        }
-    }
-
-    // Player henüz oluşmadıysa güvenli şekilde bekle.
-    writeLocalPresence(true);
-    if (localPresenceTimer) clearInterval(localPresenceTimer);
-    localPresenceTimer = setInterval(() => writeLocalPresence(false), 250);
-
-    if (localPruneTimer) clearInterval(localPruneTimer);
-    localPruneTimer = setInterval(() => {
-        syncLocalRoomSnapshot();
-    }, 700);
-
-    addLog('Yerel çok oyunculu mod açıldı.');
-    return true;
-}
-
-
-async function initFirebaseCore() {
-    if (fbDb) return true;
-    fbApp = firebase.apps && firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
-    fbAuth = firebase.auth();
-    fbDb = firebase.database();
-
-    try {
-        const cred = await fbAuth.signInAnonymously();
-        authUser = cred && cred.user ? cred.user : fbAuth.currentUser;
-    } catch (authErr) {
-        console.warn('Anonymous auth failed, continuing:', authErr);
-        authUser = fbAuth.currentUser || null;
-    }
-
-    if (!authUser) {
-        await new Promise(resolve => {
-            const unsubscribe = fbAuth.onAuthStateChanged(user => {
-                if (user) {
-                    authUser = user;
-                    unsubscribe();
-                    resolve(user);
-                }
-            });
-            setTimeout(() => {
-                try { unsubscribe(); } catch (_) {}
-                resolve(null);
-            }, 2500);
-        });
-    }
-
-    return true;
-}
-
-async function initLobbyBrowser() {
-    try {
-        if (location.protocol === 'file:') {
-            initLocalMultiplayer();
-            renderServerList(firebaseRoomsCache);
-            return;
-        }
-        await initFirebaseCore();
-        if (!roomsRef) {
-            roomsRef = fbDb.ref('rooms');
-            roomsRef.on('value', snap => {
-                firebaseRoomsCache = snap.val() || {};
-                renderServerList(firebaseRoomsCache);
-            }, err => {
-                console.error('roomsRef read error:', err);
-            });
-        }
-        if (roomInput) {
-            roomInput.value = roomId;
-        }
-        firebaseRoomsCache = (await fbDb.ref('rooms').once('value')).val() || {};
-        renderServerList(firebaseRoomsCache);
-    } catch (err) {
-        console.warn('initLobbyBrowser failed:', err);
-        renderServerList(firebaseRoomsCache);
-    }
-}
-
-
-function cleanupMultiplayer() {
-    try {
-        if (multiplayerMode === 'local') cleanupLocalMultiplayer();
-    } catch (_) {}
-    try {
-        if (meRef) {
-            meRef.remove();
-        }
-    } catch (e) {}
-    try {
-        if (playersRef) {
-            playersRef.off();
-        }
-    } catch (e) {}
-    try {
-        if (connectedRef) {
-            connectedRef.off();
-        }
-    } catch (e) {}
-    try {
-        if (roomsRef) {
-            roomsRef.off();
-        }
-    } catch (e) {}
-    try {
-        if (roomMetaRef) {
-            roomMetaRef.off();
-        }
-    } catch (e) {}
-    remotePlayers.forEach(entry => {
-        if (entry.label) entry.label.remove();
-    });
-    remotePlayers.clear();
-    firebaseReady = false;
-    fbApp = null;
-    fbDb = null;
-    playersRef = null;
-    meRef = null;
-    setNetworkStatus('Bağlantı kapatıldı');
-}
-
-async function initMultiplayer() {
-    if (firebaseReady && multiplayerMode === 'firebase') return true;
-    if (firebaseInitPromise) return firebaseInitPromise;
-
-    firebaseInitPromise = (async () => {
-        try {
-            if (location.protocol === 'file:') {
-                return initLocalMultiplayer();
-            }
-            setNetworkStatus('Firebase kimlik doğrulanıyor...');
-            await initFirebaseCore();
-
-            roomId = normalizeRoomCode(roomId || (roomInput && roomInput.value) || 'main');
-            syncRoomLobbyInfo();
-            roomsRef = fbDb.ref('rooms');
-            roomMetaRef = fbDb.ref(`rooms/${roomId}/meta`);
-            playersRef = fbDb.ref(`rooms/${roomId}/players`);
-            meRef = playersRef.child(playerId);
-
-            await roomMetaRef.update({
-                code: roomId,
-                displayName: makeRoomDisplayName(roomId),
-                updatedAt: Date.now(),
-                createdBy: authUser ? authUser.uid : null
-            }).catch(() => {});
-
-            await meRef.onDisconnect().remove();
-            try { roomMetaRef.child('lastLeave').onDisconnect().set(Date.now()); } catch (_) {}
-            await meRef.set({
-                name: playerName,
-                x: player.position.x,
-                y: player.position.y,
-                z: player.position.z,
-                yaw: player.rotation.y,
-                color: '#ff3366',
-                fartAt: 0,
-                updatedAt: Date.now(),
-                authUid: authUser ? authUser.uid : null
-            });
-
-            playersRef.on('value', snap => {
-                const data = snap.val() || {};
-                syncRemotePlayers(data);
-                refreshPlayerHud(data);
-                const count = Object.keys(data).length;
-                setNetworkStatus(`Çevrim içi: <strong>${count}</strong> kişi • ${count > 1 ? 'Buluşma aktif' : 'Bekleniyor'}`);
-            }, err => {
-                console.error('playersRef read error:', err);
-                setNetworkStatus('Firebase okuma izni yok');
-                addLog('Firebase okuma reddedildi. Database rules kontrol edilmeli.');
-            });
-
-            connectedRef = fbDb.ref('.info/connected');
-            connectedRef.on('value', snap => {
-                const connected = !!(snap && snap.val());
-                if (connected) {
-                    setNetworkStatus(`Çevrim içi: <strong>Bağlandı</strong> • ${playerName}`);
-                    sendLocalState(true);
-                } else {
-                    setNetworkStatus('Bağlantı kesildi, tekrar deneniyor...');
-                }
-            });
-
-            window.addEventListener('beforeunload', cleanupMultiplayer, { once: true });
-            document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) sendLocalState(true);
-            });
-
-            firebaseReady = true;
-            multiplayerMode = 'firebase';
-            sendLocalState(true);
-            setNetworkStatus('Çevrim içi: <strong>1</strong> kişi • Bekleniyor');
-            addLog('Firebase çok oyunculu mod başlatıldı.');
-            return true;
-        } catch (err) {
-            console.warn('Firebase multiplayer failed:', err);
-            setNetworkStatus('Çevrim içi bağlantı kurulamadı');
-            addLog(`Firebase bağlantısı kurulamadı: ${String(err && err.message ? err.message : err)}`);
-            return initLocalMultiplayer();
-        } finally {
-            firebaseInitPromise = null;
-        }
-    })();
-
-    return firebaseInitPromise;
-}
-
-function syncRemotePlayers(players) {
-    const seen = new Set();
-    for (const [id, p] of Object.entries(players)) {
-        if (id === playerId) continue;
-        seen.add(id);
-
-        let entry = remotePlayers.get(id);
-        if (!entry) {
-            const color = typeof p.color === 'string' ? p.color : '#66ccff';
-            const group = createRemoteAvatar(color);
-            group.position.set(p.x || 0, p.y || 1, p.z || 0);
-            group.rotation.y = p.yaw || 0;
-            scene.add(group);
-
-            const label = makeNameTag(p.name || 'Oyuncu', color);
-            entry = { group, label, lastFartAt: p.fartAt || 0, color, name: p.name || 'Oyuncu' };
-            remotePlayers.set(id, entry);
-            addLog(`${entry.name} dünyaya katıldı.`);
-        }
-
-        entry.name = p.name || entry.name || 'Oyuncu';
-        entry.group.position.lerp(new THREE.Vector3(p.x || 0, p.y || 1, p.z || 0), 0.35);
-        entry.group.rotation.y += (((p.yaw || 0) - entry.group.rotation.y + Math.PI * 3) % (Math.PI * 2) - Math.PI) * 0.25;
-        if (entry.label) entry.label.textContent = entry.name;
-
-        if ((p.fartAt || 0) > (entry.lastFartAt || 0)) {
-            entry.lastFartAt = p.fartAt || 0;
-            triggerFartAt(new THREE.Vector3(p.x || 0, p.y || 1, p.z || 0), true);
-        }
-    }
-
-    for (const [id, entry] of Array.from(remotePlayers.entries())) {
-        if (!seen.has(id)) {
-            if (entry.group && entry.group.parent) entry.group.parent.remove(entry.group);
-            if (entry.label) entry.label.remove();
-            remotePlayers.delete(id);
-        }
-    }
-}
-
-function sendLocalState(force = false) {
-    if (!player) return;
-    const now = Date.now();
-    if (!force && now - localLastSync < 80) return;
-    localLastSync = now;
-
-    if (multiplayerMode === 'local') {
-        writeLocalPresence(force);
-        return;
-    }
-
-    if (!meRef || !firebaseReady) return;
-    meRef.update({
-        name: playerName,
-        x: player.position.x,
-        y: player.position.y,
-        z: player.position.z,
-        yaw: player.rotation.y,
-        color: '#ff3366',
-        updatedAt: now,
-        authUid: authUser ? authUser.uid : null
-    }).catch(err => {
-        console.warn('sendLocalState failed:', err);
-    });
-}
-
-function sendFartToNetwork() {
-    if (!player) return;
-    lastSentFartAt = Date.now();
-    if (multiplayerMode === 'local') {
-        broadcastLocalFart();
-        return;
-    }
-    if (!meRef) return;
-    meRef.update({
-        fartAt: lastSentFartAt,
-        x: player.position.x,
-        y: player.position.y,
-        z: player.position.z,
-        yaw: player.rotation.y,
-        updatedAt: lastSentFartAt,
-        authUid: authUser ? authUser.uid : null
-    }).catch(err => {
-        console.warn('sendFartToNetwork failed:', err);
-    });
-}
-
-function updateRemoteTags() {
-    remotePlayers.forEach(entry => {
-        positionTagForObject(entry.label, entry.group, 2.75);
-    });
-}
-
-function addLog(text) {
-    if (!serverLogs) return;
-    const line = document.createElement('p');
-    line.textContent = text;
-    serverLogs.appendChild(line);
-    serverLogs.scrollTop = serverLogs.scrollHeight;
-}
-
-function joinServer() {
-    try {
-        playerName = normalizePlayerName(nameInput ? nameInput.value : playerName);
-        setSelectedRoom(getRoomCodeFromInput());
-
-        try {
-            localStorage.setItem('novago_name', playerName);
-        } catch (storageErr) {
-            console.warn('localStorage unavailable:', storageErr);
-        }
-
-        syncLobbyInfo();
-        syncRoomLobbyInfo();
-        renderServerList(firebaseRoomsCache);
-
-        hubContainer.style.display = 'none';
-        gameContainer.style.display = 'block';
-        loadingScreen.style.display = 'flex';
-        serverLogs.innerHTML = `<p>Sunucu hazırlanıyor: <strong>${roomId}</strong></p><p>Firebase bağlantısı kontrol ediliyor...</p>`;
-        setNetworkStatus(`Sunucu: <strong>${roomId}</strong> • Oyuncu: <strong>${playerName}</strong>`);
-        addLog(`Kimlik doğrulanıyor (${playerName})...`);
-        addLog(`Sunucuya bağlanılıyor: ${roomId}`);
-        setTimeout(() => addLog('Dünya verileri optimize ediliyor...'), 250);
-        setTimeout(() => addLog('Ortak dünya yükleniyor...'), 500);
-        setTimeout(() => addLog('Aynı sunucuya girenler eşleştiriliyor...'), 750);
-        setTimeout(() => { loadingText.innerText = 'Sunucuya Katılındı!'; loadingText.style.color = '#ffffff'; }, 900);
-        setTimeout(() => {
-            try {
-                loadingScreen.style.display = 'none';
-                mobileControls.style.display = 'flex';
-                btnExit.style.display = 'block';
-                gameUI.style.display = 'block';
-                if (speechLayer) speechLayer.innerHTML = '';
-                startGameEngine();
-            } catch (err) {
-                console.error('startGameEngine failed:', err);
-                loadingScreen.style.display = 'none';
-                gameUI.style.display = 'block';
-                setNetworkStatus('Oyun başlatılamadı');
-                serverLogs.innerHTML = `<p style="color:#ff8a8a">Hata: ${String(err && err.message ? err.message : err)}</p>`;
-            }
-        }, 1100);
-    } catch (err) {
-        console.error('joinServer failed:', err);
-        hubContainer.style.display = 'block';
-        gameContainer.style.display = 'none';
-        loadingScreen.style.display = 'none';
-        serverLogs.innerHTML = `<p style="color:#ff8a8a">Başlatma hatası: ${String(err && err.message ? err.message : err)}</p>`;
-    }
-}
-
-
-function exitGame() {
-
-    gameActive = false;
-    cancelAnimationFrame(animationId);
-    if (renderer && renderer.domElement && renderer.domElement.parentNode) renderer.domElement.parentNode.removeChild(renderer.domElement);
-    if (scene) {
-        chunks.forEach(data => scene.remove(data.group));
-        npcs.forEach(npc => npc.label && npc.label.remove());
-        fartParticles.forEach(p => scene.remove(p.mesh));
-    }
-    chunks.clear();
-    chunkEntities.clear();
-    npcs = [];
-    fartParticles = [];
-    destructibles = [];
-    gameContainer.style.display = 'none';
-    mobileControls.style.display = 'none';
-    btnExit.style.display = 'none';
-    gameUI.style.display = 'none';
-    hubContainer.style.display = 'block';
-    serverLogs.innerHTML = '<p>Uzak sunucu IP\'si aranıyor...</p>';
-    loadingText.innerText = 'Sunucuya Bağlanılıyor...';
-    loadingText.style.color = 'var(--accent-color)';
-    if (speechLayer) speechLayer.innerHTML = '';
-    if (mapStatus) mapStatus.classList.remove('show');
-    cleanupMultiplayer();
-}
-
-function createNpcLabel() {
-    const label = document.createElement('div');
-    label.className = 'npc-speech';
-    label.textContent = 'ıyy pis koktu';
-    speechLayer.appendChild(label);
-    return label;
-}
-
-function removeFromParent(object3D) {
-    if (object3D && object3D.parent) object3D.parent.remove(object3D);
-}
-
-function registerDestructible(object3D, type, key) {
-    object3D.userData.destructibleType = type;
-    object3D.userData.chunkKey = key;
-    destructibles.push({ object3D, type, key, destroyed: false });
-}
-
-function makeTree(cx = 0, cz = 0, index = 0) {
-    const group = new THREE.Group();
-    const seedBase = cx * 13.7 + cz * 7.3 + index * 19.1;
-    const trunkHeight = 1.6 + seedFromCoords(cx, cz, index + 1) * 0.7;
-    const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18, 0.23, trunkHeight, 7),
-        new THREE.MeshStandardMaterial({ color: 0x7a4e2e })
-    );
-    trunk.position.y = trunkHeight / 2;
-    trunk.castShadow = true;
-    group.add(trunk);
-
-    const crown = new THREE.Mesh(
-        new THREE.SphereGeometry(0.95 + seedFromCoords(cx, cz, index + 2) * 0.35, 8, 8),
-        new THREE.MeshStandardMaterial({ color: pickSeeded([0x2f9b3a, 0x2b8a34, 0x38a13d], cx, cz, index + 3) })
-    );
-    crown.position.y = trunkHeight + 0.7;
-    crown.castShadow = true;
-    group.add(crown);
-
-    group.rotation.y = seedFromCoords(cx, cz, index + 4) * Math.PI * 2;
-    group.userData.seedBase = seedBase;
-    return group;
-}
-
-function makeHouse(cx = 0, cz = 0, index = 0) {
-    const group = new THREE.Group();
-    const w = 4.2 + seedFromCoords(cx, cz, index + 10) * 1.2;
-    const d = 4.2 + seedFromCoords(cx, cz, index + 11) * 1.2;
-    const h = 2.4 + seedFromCoords(cx, cz, index + 12) * 0.6;
-
-    const floor = new THREE.Mesh(
-        new THREE.BoxGeometry(w, 0.16, d),
-        new THREE.MeshStandardMaterial({ color: 0x92715d })
-    );
-    floor.position.y = 0.08;
-    floor.receiveShadow = true;
-    group.add(floor);
-
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xc9b19a });
-    const side1 = new THREE.Mesh(new THREE.BoxGeometry(0.18, h, d), wallMat);
-    const side2 = new THREE.Mesh(new THREE.BoxGeometry(0.18, h, d), wallMat);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.18), wallMat);
-    side1.position.set(-w / 2 + 0.09, h / 2 + 0.16, 0);
-    side2.position.set(w / 2 - 0.09, h / 2 + 0.16, 0);
-    back.position.set(0, h / 2 + 0.16, -d / 2 + 0.09);
-    side1.castShadow = side2.castShadow = back.castShadow = true;
-    side1.receiveShadow = side2.receiveShadow = back.receiveShadow = true;
-    group.add(side1, side2, back);
-
-    const frontLeft = new THREE.Mesh(new THREE.BoxGeometry((w - 1.1) / 2, h, 0.18), wallMat);
-    const frontRight = new THREE.Mesh(new THREE.BoxGeometry((w - 1.1) / 2, h, 0.18), wallMat);
-    const frontTop = new THREE.Mesh(new THREE.BoxGeometry(1.1, h - 1.35, 0.18), wallMat);
-    frontLeft.position.set(-(w - 1.1) / 4 - 0.55, h / 2 + 0.16, d / 2 - 0.09);
-    frontRight.position.set((w - 1.1) / 4 + 0.55, h / 2 + 0.16, d / 2 - 0.09);
-    frontTop.position.set(0, 1.95, d / 2 - 0.09);
-    group.add(frontLeft, frontRight, frontTop);
-
-    const roof = new THREE.Mesh(
-        new THREE.ConeGeometry(Math.max(w, d) * 0.72, 1.9, 4),
-        new THREE.MeshStandardMaterial({ color: 0x8b3f2f })
-    );
-    roof.position.y = h + 1.0;
-    roof.rotation.y = Math.PI / 4 + seedFromCoords(cx, cz, index + 13) * 0.2;
-    roof.castShadow = true;
-    group.add(roof);
-
-    const door = new THREE.Mesh(
-        new THREE.BoxGeometry(0.85, 1.2, 0.08),
-        new THREE.MeshStandardMaterial({ color: 0x5b3c2f })
-    );
-    door.position.set(0, 0.72, d / 2 + 0.05);
-    group.add(door);
-
-    const windowMat = new THREE.MeshStandardMaterial({ color: 0xaee8ff, emissive: 0x225566, emissiveIntensity: 0.45 });
-    [-1, 1].forEach((side) => {
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.65, 0.08), windowMat);
-        win.position.set(side * (w * 0.26), 1.5, d / 2 + 0.05);
-        group.add(win);
-    });
-
-    const interior = new THREE.PointLight(0xfff2d0, 0.55, 12);
-    interior.position.set(0, 1.8, 0);
-    group.add(interior);
-
-    group.userData.enterable = true;
-    return group;
-}
-
-function makeNpc(cx = 0, cz = 0, index = 0) {
-    const group = new THREE.Group();
-    const bodyColor = [0x4dd0e1, 0xff8f6b, 0xa78bfa, 0xf59e0b][seededInt(cx, cz, 0, 3, index + 21)];
-    const skin = [0xf1c7a1, 0xd8a07a, 0xffd2b3, 0xb98268][seededInt(cx, cz, 0, 3, index + 22)];
-    const pantsColor = [0x2f3d59, 0x334155, 0x1f2937][seededInt(cx, cz, 0, 2, index + 23)];
-
-    const body = new THREE.Mesh(
-        new THREE.BoxGeometry(0.9, 1.1, 0.55),
-        new THREE.MeshStandardMaterial({ color: bodyColor })
-    );
-    body.position.y = 1.45;
-    body.castShadow = true;
-    group.add(body);
-
-    const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.38, 12, 10),
-        new THREE.MeshStandardMaterial({ color: skin })
-    );
-    head.position.y = 2.2;
-    head.castShadow = true;
-    group.add(head);
-
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    eye1.position.set(-0.12, 2.23, 0.32);
-    eye2.position.set(0.12, 2.23, 0.32);
-    group.add(eye1, eye2);
-
-    const armGeo = new THREE.BoxGeometry(0.14, 0.72, 0.14);
-    const armMat = new THREE.MeshStandardMaterial({ color: skin });
-    const armL = new THREE.Mesh(armGeo, armMat);
-    const armR = new THREE.Mesh(armGeo, armMat);
-    armL.position.set(-0.55, 1.5, 0);
-    armR.position.set(0.55, 1.5, 0);
-    armL.rotation.z = 0.15;
-    armR.rotation.z = -0.15;
-    group.add(armL, armR);
-
-    const legGeo = new THREE.BoxGeometry(0.18, 0.8, 0.18);
-    const legMat = new THREE.MeshStandardMaterial({ color: pantsColor });
-    const legL = new THREE.Mesh(legGeo, legMat);
-    const legR = new THREE.Mesh(legGeo, legMat);
-    legL.position.set(-0.2, 0.4, 0);
-    legR.position.set(0.2, 0.4, 0);
-
-    const hat = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.32, 0.34, 0.16, 8),
-        new THREE.MeshStandardMaterial({ color: 0x111827 })
-    );
-    hat.position.y = 2.52;
-    hat.rotation.y = seedFromCoords(cx, cz, index + 24) * Math.PI;
-
-    group.add(legL, legR, hat);
-    group.userData.npcName = ['Mert', 'Ada', 'Sude', 'Arda', 'Deniz'][seededInt(cx, cz, 0, 4, index + 25)];
-
-    return group;
-}
-
-function spawnChunk(cx, cz) {
-    const key = `${cx},${cz}`;
-    if (chunks.has(key)) return;
-
-    const group = new THREE.Group();
-    group.position.set(cx * CHUNK_SIZE, 0, cz * CHUNK_SIZE);
-    const entities = [];
-    const chunkSeed = seedFromCoords(cx, cz, 91);
-
-    const groundColor = 0x3a9b39 + Math.floor(seedFromCoords(cx, cz) * 0x0f0f0f);
-    const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE),
-        new THREE.MeshStandardMaterial({ color: groundColor })
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    ground.position.set(CHUNK_SIZE / 2, 0, CHUNK_SIZE / 2);
-    group.add(ground);
-
-    // çim ve taş detayları
-    const bladeCount = 5 + Math.floor(seedFromCoords(cx + 3, cz + 9) * 4);
-    for (let i = 0; i < bladeCount; i++) {
-        const height = 0.18 + seedFromCoords(cx + i, cz - i, i + 1) * 0.35;
-        const blade = new THREE.Mesh(
-            new THREE.BoxGeometry(0.03, height, 0.03),
-            new THREE.MeshStandardMaterial({ color: 0x2d7c30 })
-        );
-        blade.position.set(
-            1 + seedFromCoords(cx + i * 2, cz + i * 5) * (CHUNK_SIZE - 2),
-            height / 2,
-            1 + seedFromCoords(cx - i * 4, cz + i * 7) * (CHUNK_SIZE - 2)
-        );
-        blade.rotation.z = (seedFromCoords(cx + i * 7, cz + i * 11) - 0.5) * 0.6;
-        group.add(blade);
-        entities.push(blade);
-    }
-
-    const rockCount = seedFromCoords(cx + 8, cz + 1) > 0.55 ? 1 : 0;
-    for (let i = 0; i < rockCount; i++) {
-        const rock = new THREE.Mesh(
-            new THREE.DodecahedronGeometry(0.55 + seedFromCoords(cx + 18, cz + 12) * 0.4, 0),
-            new THREE.MeshStandardMaterial({ color: 0x7d7d7d })
-        );
-        rock.position.set(
-            4 + seedFromCoords(cx + 19 + i, cz + 13) * (CHUNK_SIZE - 8),
-            0.4,
-            4 + seedFromCoords(cx + 21 + i, cz + 15) * (CHUNK_SIZE - 8)
-        );
-        rock.castShadow = true;
-        rock.receiveShadow = true;
-        group.add(rock);
-        entities.push(rock);
-    }
-
-    const treeCount = 1 + Math.floor(seedFromCoords(cx + 5, cz + 5) * 2);
-    for (let i = 0; i < treeCount; i++) {
-        const tree = makeTree(cx, cz, i);
-        tree.position.set(
-            2 + seedFromCoords(cx + i * 4, cz + i * 8) * (CHUNK_SIZE - 4),
-            0,
-            2 + seedFromCoords(cx - i * 6, cz + i * 10) * (CHUNK_SIZE - 4)
-        );
-        tree.rotation.y = seedFromCoords(cx + i * 2, cz - i * 2) * Math.PI * 2;
-        group.add(tree);
-        entities.push(tree);
-        registerDestructible(tree, 'tree', key);
-    }
-
-    const houseChance = seedFromCoords(cx * 7, cz * 7);
-    if (houseChance > 0.68) {
-        const house = makeHouse(cx, cz, 0);
-        house.position.set(
-            CHUNK_SIZE * 0.5 + (seedFromCoords(cx + 77, cz + 2) - 0.5) * 8,
-            0,
-            CHUNK_SIZE * 0.5 + (seedFromCoords(cx + 33, cz + 4) - 0.5) * 8
-        );
-        house.rotation.y = Math.floor(seedFromCoords(cx + 90, cz + 90) * 4) * (Math.PI / 2);
-        group.add(house);
-        entities.push(house);
-        registerDestructible(house, 'house', key);
-    }
-
-    const flowerCount = 1 + Math.floor(seedFromCoords(cx + 71, cz + 19) * 3);
-    for (let i = 0; i < flowerCount; i++) {
-        const stem = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.03, 0.04, 0.28 + seedFromCoords(cx, cz, i + 30) * 0.18, 6),
-            new THREE.MeshStandardMaterial({ color: 0x2f8f2f })
-        );
-        stem.position.set(
-            1 + seedFromCoords(cx + i * 9, cz + i * 3) * (CHUNK_SIZE - 2),
-            0.14,
-            1 + seedFromCoords(cx - i * 6, cz + i * 5) * (CHUNK_SIZE - 2)
-        );
-        group.add(stem);
-
-        const bloom = new THREE.Mesh(
-            new THREE.SphereGeometry(0.08 + seedFromCoords(cx + i * 2, cz - i * 4, i + 31) * 0.08, 6, 6),
-            new THREE.MeshStandardMaterial({ color: [0xff5ca8, 0xffdd57, 0x67e8f9, 0xffffff][i % 4] })
-        );
-        bloom.position.set(stem.position.x, stem.position.y + 0.22, stem.position.z);
-        group.add(bloom);
-    }
-
-    const npcCount = seedFromCoords(cx * 3, cz * 9) > 0.55 ? 1 : 0;
-    for (let i = 0; i < npcCount; i++) {
-        const npcMesh = makeNpc(cx, cz, i);
-        const x = 4 + seedFromCoords(cx + 99 + i, cz + 33, i + 1) * (CHUNK_SIZE - 8);
-        const z = 4 + seedFromCoords(cx + 55 + i, cz + 77, i + 2) * (CHUNK_SIZE - 8);
-        npcMesh.position.set(x, 0, z);
-        npcMesh.castShadow = true;
-        npcMesh.userData.isNPC = true;
-        npcMesh.userData.homeChunk = key;
-        group.add(npcMesh);
-
-        const label = createNpcLabel();
-        npcs.push({ mesh: npcMesh, label, speechUntil: 0, chunkKey: key, vx: 0, vz: 0, targetX: x, targetZ: z, nextThink: 0 });
-    }
-
-    chunks.set(key, { group, cx, cz });
-    chunkEntities.set(key, entities);
-    scene.add(group);
-}
-
-function unloadChunk(key) {
-    const chunk = chunks.get(key);
-    if (!chunk) return;
-    scene.remove(chunk.group);
-    chunks.delete(key);
-    chunkEntities.delete(key);
-    npcs = npcs.filter(npc => {
-        if (npc.chunkKey === key) { npc.label.remove(); return false; }
-        return true;
-    });
-}
-
-function updateChunks() {
-    const currentCX = Math.floor(player.position.x / CHUNK_SIZE);
-    const currentCZ = Math.floor(player.position.z / CHUNK_SIZE);
-    const needed = new Set();
-    for (let x = currentCX - CHUNK_RADIUS; x <= currentCX + CHUNK_RADIUS; x++) {
-        for (let z = currentCZ - CHUNK_RADIUS; z <= currentCZ + CHUNK_RADIUS; z++) {
-            const key = `${x},${z}`;
-            needed.add(key);
-            if (!chunks.has(key)) { spawnChunk(x, z); showMapStatus('Harita yükleniyor...'); }
-        }
-    }
-    for (const key of Array.from(chunks.keys())) {
-        if (!needed.has(key)) { unloadChunk(key); showMapStatus('Harita temizleniyor...'); }
-    }
-}
-
-function triggerFartAt(origin, remote = false) {
-    const now = performance.now();
-    if (!remote && now - lastFartAt < 1300) return false;
-    if (!remote) lastFartAt = now;
-
-    showMapStatus(remote ? '💥 Uzak osurma geldi!' : '💨 Osurma yayıldı!');
-    for (let i = 0; i < 14; i++) {
-        const mesh = new THREE.Mesh(
-            new THREE.SphereGeometry(0.14 + Math.random() * 0.07, 8, 8),
-            new THREE.MeshStandardMaterial({ color: 0xd6d6d6, transparent: true, opacity: 0.75 })
-        );
-        mesh.position.set(origin.x + (Math.random() - 0.5) * 0.8, origin.y + 0.8 + Math.random() * 0.4, origin.z + (Math.random() - 0.5) * 0.8);
-        scene.add(mesh);
-        fartParticles.push({ mesh, vx:(Math.random()-0.5)*0.08, vy:0.02+Math.random()*0.06, vz:(Math.random()-0.5)*0.08, life:60 + Math.floor(Math.random()*30) });
-    }
-
-    npcs.forEach(npc => {
-        const npcPos = new THREE.Vector3();
-        npc.mesh.getWorldPosition(npcPos);
-        if (npcPos.distanceTo(origin) < 10) {
-            npc.speechUntil = now + 2000;
-            npc.reactedToFart = true;
-        }
-    });
-
-    destroyNearbyObjects(9.5, origin);
-    return true;
-}
-
-function fart() {
-    const origin = player.position.clone();
-    if (!triggerFartAt(origin, false)) return;
-    sendFartToNetwork();
-}
-
-function buildPlayer() {
-    player = new THREE.Group();
-    const skin = 0xf1c7a1;
-    const shirt = 0xff3366;
-    const pants = 0x21324e;
-
-    playerBody = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.15, 0.6), new THREE.MeshStandardMaterial({ color: shirt }));
-    playerBody.position.y = 1.35;
-    playerBody.castShadow = true;
-
-    playerHead = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshStandardMaterial({ color: skin }));
-    playerHead.position.y = 2.18;
-    playerHead.castShadow = true;
-
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), eyeMat);
-    eye1.position.set(-0.13, 2.2, 0.34);
-    eye2.position.set(0.13, 2.2, 0.34);
-
-    const armGeo = new THREE.BoxGeometry(0.14, 0.78, 0.14);
-    const armMat = new THREE.MeshStandardMaterial({ color: skin });
-    const armL = new THREE.Mesh(armGeo, armMat);
-    const armR = new THREE.Mesh(armGeo, armMat);
-    armL.position.set(-0.58, 1.5, 0);
-    armR.position.set(0.58, 1.5, 0);
-    armL.rotation.z = 0.12;
-    armR.rotation.z = -0.12;
-    playerArms = [armL, armR];
-
-    const legGeo = new THREE.BoxGeometry(0.18, 0.92, 0.18);
-    const legMat = new THREE.MeshStandardMaterial({ color: pants });
-    const legL = new THREE.Mesh(legGeo, legMat);
-    const legR = new THREE.Mesh(legGeo, legMat);
-    legL.position.set(-0.22, 0.42, 0);
-    legR.position.set(0.22, 0.42, 0);
-    playerLegs = [legL, legR];
-
-    player.add(playerBody, playerHead, eye1, eye2, armL, armR, legL, legR);
-    player.position.set(MEETING_POINT.x, MEETING_POINT.y, MEETING_POINT.z);
-    scene.add(player);
-}
-
-function startGameEngine() {
-    gameActive = true;
-    const container = document.getElementById('canvas-container');
-    container.innerHTML = '';
-    const startupFallback = document.getElementById('startup-fallback');
-    if (startupFallback) startupFallback.style.display = 'none';
-
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.Fog(0x87ceeb, 24, 110);
-
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 4, 8);
-
-    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.1));
-    renderer.setClearColor(0x87ceeb, 1);
-    renderer.shadowMap.enabled = false;
-    container.appendChild(renderer.domElement);
-    renderer.domElement.style.touchAction = 'none';
-    setupLookControls();
-
-    hemiLight = new THREE.HemisphereLight(0xffffff, 0x446644, 0.9);
-    scene.add(hemiLight);
-    sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
-    sunLight.position.set(10, 20, 10);
-    sunLight.castShadow = true;
-    scene.add(sunLight);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
-    scene.add(ambientLight);
-
-    const sun = new THREE.Mesh(
-        new THREE.SphereGeometry(2.1, 20, 20),
-        new THREE.MeshBasicMaterial({ color: 0xfff3c4 })
-    );
-    sun.position.set(28, 32, -28);
-    scene.add(sun);
-
-    for (let i = 0; i < 8; i++) {
-        const cloud = new THREE.Group();
-        const puffCount = 3 + (i % 3);
-        for (let j = 0; j < puffCount; j++) {
-            const puffSize = 1.1 + seedFromCoords(i, j, 200 + j) * 0.7;
-            const puff = new THREE.Mesh(
-                new THREE.SphereGeometry(puffSize, 10, 10),
-                new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.72 })
-            );
-            puff.position.set(j * 1.1, seedFromCoords(i, j, 201) * 0.4, seedFromCoords(i, j, 202) * 0.4);
-            cloud.add(puff);
-        }
-        cloud.position.set(-40 + i * 14, 25 + seedFromCoords(i, i, 203) * 8, -60 + (i % 2) * 18);
-        scene.add(cloud);
-    }
-
-    buildPlayer();
-    player.position.set(0, 1, 0);
-    player.rotation.y = 0;
-
-    const meetingPad = new THREE.Mesh(
-        new THREE.CylinderGeometry(4.5, 4.5, 0.2, 24),
-        new THREE.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x102a4a, emissiveIntensity: 0.4 })
-    );
-    meetingPad.position.set(0, 0.1, 0);
-    meetingPad.receiveShadow = true;
-    scene.add(meetingPad);
-
-    const meetingPillar = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.22, 0.22, 8, 10),
-        new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.4 })
-    );
-    meetingPillar.position.set(0, 4.1, 0);
-    meetingPillar.castShadow = true;
-    scene.add(meetingPillar);
-
-    const meetingGlow = new THREE.PointLight(0x00ff88, 1.2, 20);
-    meetingGlow.position.set(0, 4.5, 0);
-    scene.add(meetingGlow);
-
-    updateChunks();
-    initMultiplayer().catch(err => console.warn('initMultiplayer promise rejected:', err));
-    if (!startGameEngine._resizeBound) { window.addEventListener('resize', onWindowResize, false); startGameEngine._resizeBound = true; }
-    animate();
-}
-
-function setMoveState(key, state) {
-    if (key === 'forward') moveForward = state;
-    if (key === 'back') moveBack = state;
-    if (key === 'left') moveLeft = state;
-    if (key === 'right') moveRight = state;
-}
-function wireHoldButton(button, key) {
-    if (!button) return;
-    button.addEventListener('pointerdown', e => { e.preventDefault(); setMoveState(key, true); });
-    button.addEventListener('pointerup', () => setMoveState(key, false));
-    button.addEventListener('pointerleave', () => setMoveState(key, false));
-    button.addEventListener('pointercancel', () => setMoveState(key, false));
-}
-
-function setupJoystick() {
-    const base = document.getElementById('joystick-base');
-    const stick = document.getElementById('joystick-stick');
-    if (!base || !stick) return;
-
-    const radius = 48;
-
-    const resetStick = () => {
-        joystickActive = false;
-        joystickPointerId = null;
-        joystickX = 0;
-        joystickY = 0;
-        stick.style.transform = 'translate(-50%, -50%)';
-    };
-
-    base.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        joystickActive = true;
-        joystickPointerId = e.pointerId;
-        base.setPointerCapture(e.pointerId);
-        const rect = base.getBoundingClientRect();
-        joystickCenter = { x: rect.width / 2, y: rect.height / 2 };
-        moveJoystickToEvent(e, rect, radius, stick);
-    });
-
-    base.addEventListener('pointermove', (e) => {
-        if (!joystickActive || e.pointerId !== joystickPointerId) return;
-        const rect = base.getBoundingClientRect();
-        moveJoystickToEvent(e, rect, radius, stick);
-    });
-
-    base.addEventListener('pointerup', resetStick);
-    base.addEventListener('pointercancel', resetStick);
-    base.addEventListener('lostpointercapture', resetStick);
-
-    function moveJoystickToEvent(e, rect, maxRadius, stickEl) {
-        const dx = e.clientX - (rect.left + rect.width / 2);
-        const dy = e.clientY - (rect.top + rect.height / 2);
-        const len = Math.hypot(dx, dy);
-        const clamped = Math.min(maxRadius, len);
-        const nx = len > 0 ? dx / len : 0;
-        const ny = len > 0 ? dy / len : 0;
-
-        joystickX = (clamped / maxRadius) * nx;
-        joystickY = (clamped / maxRadius) * ny;
-
-        stickEl.style.transform = `translate(calc(-50% + ${joystickX * maxRadius}px), calc(-50% + ${joystickY * maxRadius}px))`;
-    }
-}
-
-wireHoldButton(btnFwd, 'forward');
-wireHoldButton(btnBack, 'back');
-wireHoldButton(btnLeft, 'left');
-wireHoldButton(btnRight, 'right');
-if (btnFart) btnFart.addEventListener('pointerdown', e => { e.preventDefault(); fart(); });
-if (btnJmp) btnJmp.addEventListener('pointerdown', e => { e.preventDefault(); if (isGrounded) { velocityY = jumpPower; isGrounded = false; } });
-setupJoystick();
-
-function setupLookControls() {
-    const target = renderer ? renderer.domElement : null;
-    if (!target) return;
-
-    target.style.touchAction = 'none';
-    target.style.cursor = 'grab';
-
-    const isUiTarget = (el) => {
-        return !!el && (
-            el.closest('#mobile-controls') ||
-            el.closest('#joystick-area') ||
-            el.closest('#btn-exit') ||
-            el.closest('#game-ui') ||
-            el.closest('.join-panel')
-        );
-    };
-
-    const down = (e) => {
-        if (isUiTarget(e.target)) return;
-        e.preventDefault();
-        lookDragging = true;
-        lookPointerId = e.pointerId;
-        lookLastX = e.clientX;
-        lookLastY = e.clientY;
-        try { target.setPointerCapture(e.pointerId); } catch (_) {}
-    };
-
-    const move = (e) => {
-        if (!lookDragging || e.pointerId !== lookPointerId) return;
-        e.preventDefault();
-        const dx = e.clientX - lookLastX;
-        const dy = e.clientY - lookLastY;
-        lookLastX = e.clientX;
-        lookLastY = e.clientY;
-        viewYaw -= dx * 0.006;
-        viewPitch = Math.max(maxPitchDown, Math.min(maxPitchUp, viewPitch - dy * 0.004));
-    };
-
-    const up = (e) => {
-        if (lookPointerId !== null && e.pointerId !== lookPointerId) return;
-        lookDragging = false;
-        lookPointerId = null;
-        try { target.releasePointerCapture(e.pointerId); } catch (_) {}
-    };
-
-    target.addEventListener('pointerdown', down, { passive: false });
-    target.addEventListener('pointermove', move, { passive: false });
-    target.addEventListener('pointerup', up);
-    target.addEventListener('pointercancel', up);
-    target.addEventListener('lostpointercapture', up);
-    window.addEventListener('blur', () => { lookDragging = false; lookPointerId = null; });
-}
-
-
-document.addEventListener('keydown', e => {
-    if (['KeyW','ArrowUp'].includes(e.code)) moveForward = true;
-    if (['KeyS','ArrowDown'].includes(e.code)) moveBack = true;
-    if (['KeyA','ArrowLeft'].includes(e.code)) moveLeft = true;
-    if (['KeyD','ArrowRight'].includes(e.code)) moveRight = true;
-    if (['ShiftLeft','ShiftRight'].includes(e.code)) isRunning = true;
-    if (e.code === 'Space' && isGrounded) { velocityY = jumpPower; isGrounded = false; }
-    if (e.code === 'KeyF') fart();
-});
-document.addEventListener('keyup', e => {
-    if (['KeyW','ArrowUp'].includes(e.code)) moveForward = false;
-    if (['KeyS','ArrowDown'].includes(e.code)) moveBack = false;
-    if (['KeyA','ArrowLeft'].includes(e.code)) moveLeft = false;
-    if (['KeyD','ArrowRight'].includes(e.code)) moveRight = false;
-    if (['ShiftLeft','ShiftRight'].includes(e.code)) isRunning = false;
-});
-
-function onWindowResize() {
-    if (!camera || !renderer) return;
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function updateMovement() {
-    let inputX = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
-    let inputY = (moveForward ? 1 : 0) - (moveBack ? 1 : 0);
-
-    if (Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) {
-        inputX += joystickX;
-        inputY -= joystickY;
-    }
-
-    inputX = Math.max(-1, Math.min(1, inputX));
-    inputY = Math.max(-1, Math.min(1, inputY));
-
-    const moveVec = new THREE.Vector3(inputX, 0, -inputY);
-    if (moveVec.lengthSq() > 0) {
-        moveVec.normalize();
-        const speed = moveSpeed * (isRunning ? runMultiplier : 1);
-        const yaw = viewYaw;
-        const forward = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
-        const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
-        const worldMove = new THREE.Vector3();
-        worldMove.addScaledVector(right, moveVec.x);
-        worldMove.addScaledVector(forward, -moveVec.z);
-        if (worldMove.lengthSq() > 0) worldMove.normalize();
-
-        player.position.addScaledVector(worldMove, speed);
-
-        const targetYaw = Math.atan2(worldMove.x, -worldMove.z);
-        player.rotation.y += ((((targetYaw - player.rotation.y) + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * 0.25;
-
-        if (isGrounded) {
-            const bob = Math.sin(performance.now() * 0.02) * 0.06;
-            player.position.y = 1 + bob;
-        }
-    }
-}
-
-function updateNpcAI(dt) {
-    const now = performance.now();
-    npcs.forEach(npc => {
-        const p = npc.mesh.position;
-        const playerPos = player.position;
-        const distToPlayer = Math.hypot(playerPos.x - p.x, playerPos.z - p.z);
-
-        if (distToPlayer < 6) {
-            npc.speechUntil = now + 1800;
-            if (!npc.reactedToFart) npc.label.textContent = 'Selam!';
-            npc.targetX = p.x + (p.x - playerPos.x) * 1.4;
-            npc.targetZ = p.z + (p.z - playerPos.z) * 1.4;
-        }
-        if (distToPlayer >= 6 && now > npc.speechUntil) {
-            npc.reactedToFart = false;
-        }
-
-        if (now > npc.nextThink || Math.abs(p.x - npc.targetX) < 0.2 && Math.abs(p.z - npc.targetZ) < 0.2) {
-            const home = chunks.get(npc.chunkKey);
-            if (home) {
-                const baseX = home.cx * CHUNK_SIZE + CHUNK_SIZE * 0.5;
-                const baseZ = home.cz * CHUNK_SIZE + CHUNK_SIZE * 0.5;
-                npc.targetX = baseX + (seedFromCoords(home.cx, home.cz, now * 0.001 + Math.random()) - 0.5) * (CHUNK_SIZE * 0.65);
-                npc.targetZ = baseZ + (seedFromCoords(home.cx + 5, home.cz + 5, now * 0.001 + Math.random()) - 0.5) * (CHUNK_SIZE * 0.65);
-                npc.nextThink = now + 2000 + seedFromCoords(home.cx, home.cz, 9) * 2500;
-            }
-        }
-        const dx = npc.targetX - p.x;
-        const dz = npc.targetZ - p.z;
-        const dist = Math.hypot(dx, dz);
-        if (dist > 0.05) {
-            const speed = 0.02 + seedFromCoords(p.x, p.z, 4) * 0.03;
-            p.x += (dx / dist) * speed * dt;
-            p.z += (dz / dist) * speed * dt;
-            npc.mesh.rotation.y = Math.atan2(dx, -dz);
-        }
-    });
-}
-
-function updateNpcLabels() {
-    const width = window.innerWidth, height = window.innerHeight;
-    const now = performance.now();
-    npcs.forEach(npc => {
-        const worldPos = new THREE.Vector3();
-        npc.mesh.getWorldPosition(worldPos);
-        const screenPos = worldPos.clone().add(new THREE.Vector3(0, 2.5, 0)).project(camera);
-        const visible = screenPos.z < 1;
-        npc.label.style.left = `${(screenPos.x * 0.5 + 0.5) * width}px`;
-        npc.label.style.top = `${(-screenPos.y * 0.5 + 0.5) * height}px`;
-        const active = npc.speechUntil > now && visible;
-        npc.label.classList.toggle('show', active);
-        npc.label.style.display = visible ? 'block' : 'none';
-        if (active) {
-            npc.label.textContent = npc.reactedToFart ? 'ıyy pis koktu' : 'Selam!';
-        } else {
-            npc.label.textContent = npc.mesh.userData.npcName || 'NPC';
-        }
-    });
-    updateRemoteTags();
-}
-
-function updateFartParticles() {
-    fartParticles = fartParticles.filter(p => {
-        p.life -= 1;
-        p.mesh.position.x += p.vx;
-        p.mesh.position.y += p.vy;
-        p.mesh.position.z += p.vz;
-        p.mesh.material.opacity = Math.max(0, p.life / 90);
-        if (p.life <= 0) { scene.remove(p.mesh); return false; }
-        return true;
-    });
-}
-
-function spawnDebris(position, count = 10) {
-    for (let i = 0; i < count; i++) {
-        const debris = new THREE.Mesh(
-            new THREE.BoxGeometry(0.08 + Math.random() * 0.14, 0.08 + Math.random() * 0.14, 0.08 + Math.random() * 0.14),
-            new THREE.MeshStandardMaterial({ color: 0x9e7a52, transparent: true, opacity: 0.95 })
-        );
-        debris.position.copy(position).add(new THREE.Vector3((Math.random() - 0.5) * 1.6, 0.5 + Math.random() * 1.5, (Math.random() - 0.5) * 1.6));
-        scene.add(debris);
-        fartParticles.push({
-            mesh: debris,
-            vx: (Math.random() - 0.5) * 0.18,
-            vy: 0.04 + Math.random() * 0.08,
-            vz: (Math.random() - 0.5) * 0.18,
-            life: 40 + Math.floor(Math.random() * 25)
-        });
-    }
-}
-
-function destroyNearbyObjects(radius = 9, origin = null) {
-    const p = origin ? origin.clone() : player.position.clone();
-    let destroyedCount = 0;
-
-    destructibles.forEach(item => {
-        if (item.destroyed) return;
-        const pos = new THREE.Vector3();
-        item.object3D.getWorldPosition(pos);
-        if (pos.distanceTo(p) <= radius) {
-            item.destroyed = true;
-            destroyedCount++;
-            spawnDebris(pos, item.type === 'house' ? 20 : 12);
-            removeFromParent(item.object3D);
-        }
-    });
-
-    if (destroyedCount > 0) {
-        showMapStatus(`💥 ${destroyedCount} şey yıkıldı!`);
+    blockCountEl.textContent = `${blocks.size} / 300+`;
+  }
+
+  function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+    return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+  }
+
+  function collisionMove(dt){
+    const speed = fastMode ? 240 : 180;
+    const accel = fastMode ? 2200 : 1800;
+    const friction = 0.84;
+    const jumpV = fastMode ? 650 : 590;
+
+    let move = 0;
+    if (input.left || input.joyX < -0.25) move -= 1;
+    if (input.right || input.joyX > 0.25) move += 1;
+
+    if (move !== 0){
+      player.vx += move * accel * dt;
+      player.dir = move;
     } else {
-        showMapStatus('💨 Osurma yayıldı!');
+      player.vx *= Math.pow(friction, dt * 60);
     }
-}
+    player.vx = Math.max(-speed, Math.min(speed, player.vx));
 
-function animate() {
-    if (!gameActive) return;
-    animationId = requestAnimationFrame(animate);
-    worldTime += 0.016;
+    if (input.jump && player.onGround){
+      player.vy = -jumpV;
+      player.onGround = false;
+      input.jump = false;
+      showToast('Zıpladın');
+    }
 
-    // player physics
-    velocityY += gravity;
-    player.position.y += velocityY;
-    if (player.position.y <= 1) { player.position.y = 1; velocityY = 0; isGrounded = true; } else { isGrounded = false; }
+    player.vy += gravity * dt;
 
-    updateMovement();
-    updateNpcAI(1);
-    updateChunks();
-    updateFartParticles();
-    updateNpcLabels();
-    sendLocalState();
+    // X axis
+    player.x += player.vx * dt;
+    let minX = Math.floor((player.x - player.w/2) / WORLD.blockSize) - 1;
+    let maxX = Math.floor((player.x + player.w/2) / WORLD.blockSize) + 1;
+    let minY = Math.floor((player.y - player.h) / WORLD.blockSize) - 2;
+    let maxY = Math.floor((player.y + 6) / WORLD.blockSize) + 2;
+    for (let bx=minX; bx<=maxX; bx++) for (let by=minY; by<=maxY; by++){
+      if (!hasBlock(bx,by)) continue;
+      const rx = bx*WORLD.blockSize, ry = by*WORLD.blockSize;
+      if (rectsOverlap(player.x-player.w/2, player.y-player.h, player.w, player.h, rx, ry, WORLD.blockSize, WORLD.blockSize)){
+        if (player.vx > 0) player.x = rx - player.w/2 - 0.1;
+        else if (player.vx < 0) player.x = rx + WORLD.blockSize + player.w/2 + 0.1;
+        player.vx = 0;
+      }
+    }
 
-    // remote avatars: gentle smoothing and motion sync
-    remotePlayers.forEach(entry => {
-        if (!entry.group) return;
-        const parts = entry.group.userData.parts || {};
-        if (parts.body) parts.body.rotation.z = Math.sin(performance.now() * 0.003) * 0.02;
-        if (parts.legL && parts.legR) {
-            const walk = Math.sin(performance.now() * 0.008 + entry.group.position.x) * 0.3;
-            parts.legL.rotation.x = walk * 0.5;
-            parts.legR.rotation.x = -walk * 0.5;
+    // Y axis
+    player.y += player.vy * dt;
+    player.onGround = false;
+    minX = Math.floor((player.x - player.w/2) / WORLD.blockSize) - 1;
+    maxX = Math.floor((player.x + player.w/2) / WORLD.blockSize) + 1;
+    minY = Math.floor((player.y - player.h) / WORLD.blockSize) - 2;
+    maxY = Math.floor((player.y + 12) / WORLD.blockSize) + 2;
+    for (let bx=minX; bx<=maxX; bx++) for (let by=minY; by<=maxY; by++){
+      if (!hasBlock(bx,by)) continue;
+      const rx = bx*WORLD.blockSize, ry = by*WORLD.blockSize;
+      if (rectsOverlap(player.x-player.w/2, player.y-player.h, player.w, player.h, rx, ry, WORLD.blockSize, WORLD.blockSize)){
+        if (player.vy > 0){
+          player.y = ry - 0.1;
+          player.vy = 0;
+          player.onGround = true;
+        } else if (player.vy < 0){
+          player.y = ry + WORLD.blockSize + player.h + 0.1;
+          player.vy = 0;
         }
-        positionTagForObject(entry.label, entry.group, 2.75);
-    });
+      }
+    }
 
-    // camera follow
-    const orbit = new THREE.Vector3(0, cameraHeight, cameraDistance);
-    orbit.applyAxisAngle(new THREE.Vector3(1, 0, 0), viewPitch);
-    orbit.applyAxisAngle(new THREE.Vector3(0, 1, 0), viewYaw);
-    const desired = player.position.clone().add(orbit);
-    camera.position.lerp(desired, 0.1);
-    camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+    // fall reset
+    if (player.y > 1800){
+      player.x = 8 * WORLD.blockSize;
+      player.y = 8 * WORLD.blockSize;
+      player.vx = player.vy = 0;
+      showToast('Yeniden doğdun');
+    }
+  }
 
-    // player walk animation
-    const walk = (moveForward || moveBack || moveLeft || moveRight || Math.abs(joystickX) > 0.01 || Math.abs(joystickY) > 0.01) && isGrounded ? Math.sin(performance.now() * 0.02) : 0;
-    playerLegs[0].rotation.x = walk * 0.7;
-    playerLegs[1].rotation.x = -walk * 0.7;
-    playerArms[0].rotation.x = -walk * 0.55;
-    playerArms[1].rotation.x = walk * 0.55;
-    playerBody.rotation.z = Math.sin(performance.now() * 0.003) * 0.03;
+  function drawBlock(bx, by, type){
+    const x = bx * WORLD.blockSize - camera.x;
+    const y = by * WORLD.blockSize - camera.y;
+    const s = WORLD.blockSize;
+    if (x < -s || y < -s || x > innerWidth + s || y > innerHeight + s) return;
+    const palette = [
+      ['#7ed957','#5ea83a','#86f06e'],
+      ['#8a6f4f','#6b5238','#a27d59'],
+      ['#86d6ff','#4fa2d9','#c8f4ff'],
+      ['#b18cff','#7b57c6','#d2c1ff'],
+      ['#ffb35d','#db7b2d','#ffd09a'],
+    ][(type-1) % 5];
+    ctx.fillStyle = palette[1];
+    ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = palette[2];
+    ctx.fillRect(x, y, s, 5);
+    ctx.fillStyle = palette[0];
+    ctx.fillRect(x, y, 5, s);
+    ctx.strokeStyle = 'rgba(0,0,0,.15)';
+    ctx.strokeRect(x+.5, y+.5, s-1, s-1);
+  }
 
-    // gentle sunlight shift
-    const lightWave = 0.1 * Math.sin(worldTime * 0.2);
-    if (sunLight) sunLight.intensity = 0.95 + lightWave;
-    if (hemiLight) hemiLight.intensity = 0.85 + lightWave * 0.5;
+  function drawSky(){
+    const g = ctx.createLinearGradient(0,0,0,innerHeight);
+    g.addColorStop(0,'#78c7ff');
+    g.addColorStop(.55,'#a8dcff');
+    g.addColorStop(1,'#e7f7ff');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,innerWidth,innerHeight);
+    // sun
+    ctx.beginPath();
+    ctx.arc(innerWidth*0.82, innerHeight*0.16, 34, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,245,170,.9)';
+    ctx.fill();
+    // clouds
+    const cx = (camera.x * .08) % (innerWidth + 280) - 120;
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    for (let i=0;i<4;i++){
+      const x = (cx + i*220) % (innerWidth + 280) - 120;
+      const y = 60 + (i%2)*38;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 42, 22, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x+34, y-10, 30, 18, 0, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(x+58, y, 38, 20, 0, 0, Math.PI*2); ctx.fill();
+    }
+  }
 
-    renderer.render(scene, camera);
-}
+  function drawPlayer(px, py, skin, name, isRemote=false){
+    const x = px - camera.x;
+    const y = py - camera.y;
+    const w = 22, h = 34;
+    const shirt = skin.shirt || '#4bd0ff';
+    const hair = skin.hair || '#2b2d52';
+    const face = skin.skin || '#f6c7a2';
+    const dir = isRemote ? (skin.dir || 1) : player.dir;
+    const flip = dir < 0;
+    const ox = flip ? x - w : x;
+    const mapX = (dx, dw) => flip ? ox + (w - dx - dw) : ox + dx;
+
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath(); ctx.ellipse(x+11, y+h+4, 18, 6, 0, 0, Math.PI*2); ctx.fill();
+
+    const r = (dx, dy, dw, dh, color) => { ctx.fillStyle = color; ctx.fillRect(mapX(dx, dw), y + dy, dw, dh); };
+
+    r(6, 22, 6, 12, '#304e6a');
+    r(14, 22, 6, 12, '#304e6a');
+    r(4, 12, 18, 14, shirt);
+    r(4, 12, 18, 3, '#1c2230');
+    r(1, 13, 4, 12, face); r(21, 13, 4, 12, face);
+    r(5, 0, 14, 13, face);
+    r(4, 0, 16, 4, hair);
+    r(4, 3, 4, 5, hair);
+    r(16, 3, 4, 5, hair);
+    r(8, 6, 2, 2, '#15202d'); r(14, 6, 2, 2, '#15202d');
+    r(8, 6, 1, 1, 'rgba(255,255,255,.85)'); r(14, 6, 1, 1, 'rgba(255,255,255,.85)');
+
+    ctx.font = '700 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,.38)';
+    ctx.fillText(name, x+11, y-8);
+    ctx.fillStyle = 'white';
+    ctx.fillText(name, x+11, y-9);
+  }
+
+  function draw(){
+    drawSky();
+    const startBlockX = Math.floor((camera.x - 2*WORLD.blockSize) / WORLD.blockSize);
+    const endBlockX = Math.floor((camera.x + innerWidth + 2*WORLD.blockSize) / WORLD.blockSize);
+    const startBlockY = Math.floor((camera.y - 2*WORLD.blockSize) / WORLD.blockSize);
+    const endBlockY = Math.floor((camera.y + innerHeight + 2*WORLD.blockSize) / WORLD.blockSize);
+
+    // blocks
+    for (let bx=startBlockX; bx<=endBlockX; bx++){
+      for (let by=startBlockY; by<=endBlockY; by++){
+        const b = blocks.get(key(bx,by));
+        if (b) drawBlock(b.x,b.y,b.type);
+      }
+    }
+
+    // remote players first
+    for (const p of Object.values(remotePlayers)){
+      const sx = p.x - camera.x;
+      const sy = p.y - camera.y;
+      if (sx < -100 || sy < -100 || sx > innerWidth + 100 || sy > innerHeight + 100) continue;
+      drawPlayer(p.x,p.y,CHARSET[p.char] || CHARSET[0], p.name || 'Player', true);
+    }
+
+    drawPlayer(player.x, player.y, player.skin, playerName || 'Sen', false);
+
+    // vignette
+    const vg = ctx.createRadialGradient(innerWidth/2, innerHeight/2, innerHeight/4, innerWidth/2, innerHeight/2, innerHeight);
+    vg.addColorStop(0,'rgba(255,255,255,0)');
+    vg.addColorStop(1,'rgba(0,0,0,.14)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,innerWidth,innerHeight);
+  }
+
+  function updateCamera(){
+    camera.x = player.x - innerWidth / 2;
+    camera.y = player.y - innerHeight * 0.58;
+    if (camera.y < 0) camera.y = 0;
+  }
+
+  function tryMine(){
+    const bx = Math.floor(player.x / WORLD.blockSize) + player.dir;
+    const by = Math.floor((player.y - player.h/2) / WORLD.blockSize);
+    for (let yy=by-1; yy<=by+1; yy++){
+      if (hasBlock(bx,yy)) { removeBlock(bx,yy); player.blocksPlaced = Math.max(0, player.blocksPlaced-1); showToast('Blok kırıldı'); return; }
+    }
+    showToast('Kırılacak blok yok');
+  }
+  function tryPlace(){
+    const bx = Math.floor(player.x / WORLD.blockSize) + player.dir;
+    const by = Math.floor((player.y + 8) / WORLD.blockSize);
+    const below = by + 1;
+    if (!hasBlock(bx, by) && !hasBlock(bx, below)){
+      addBlock(bx, by, 2);
+      player.blocksPlaced++;
+      showToast('Blok eklendi');
+    } else {
+      showToast('Orası dolu');
+    }
+  }
+
+  // input
+  function bindHold(el, onDown, onUp){
+    const down = (e)=>{ e.preventDefault(); onDown(); };
+    const up = (e)=>{ e.preventDefault(); onUp(); };
+    el.addEventListener('pointerdown', down, {passive:false});
+    addEventListener('pointerup', up, {passive:false});
+    addEventListener('pointercancel', up, {passive:false});
+  }
+
+  bindHold(leftBtn, ()=>input.left=true, ()=>input.left=false);
+  bindHold(rightBtn, ()=>input.right=true, ()=>input.right=false);
+  bindHold(jumpBtn, ()=>input.jump=true, ()=>{});
+  bindHold(placeBtn, ()=>tryPlace(), ()=>{});
+  bindHold(breakBtn, ()=>tryMine(), ()=>{});
+
+  let joyId = null;
+  let joyCenter = {x:0,y:0};
+  joy.addEventListener('pointerdown', (e)=>{
+    joyId = e.pointerId;
+    joy.setPointerCapture(joyId);
+    const r = joy.getBoundingClientRect();
+    joyCenter = {x:r.left+r.width/2, y:r.top+r.height/2};
+    moveJoy(e.clientX, e.clientY);
+  });
+  addEventListener('pointermove', (e)=>{
+    if (joyId === e.pointerId) moveJoy(e.clientX, e.clientY);
+  });
+  addEventListener('pointerup', (e)=>{
+    if (joyId === e.pointerId){
+      joyId = null; input.joyX = 0; input.joyY = 0; stick.style.transform = 'translate(0px, 0px)';
+    }
+  });
+  function moveJoy(x,y){
+    const dx = x - joyCenter.x, dy = y - joyCenter.y;
+    const max = 38;
+    const len = Math.hypot(dx,dy) || 1;
+    const cl = Math.min(max, len);
+    const nx = dx / len, ny = dy / len;
+    input.joyX = (cl/max) * nx;
+    input.joyY = (cl/max) * ny;
+    stick.style.transform = `translate(${nx*cl}px, ${ny*cl}px)`;
+  }
+
+  addEventListener('keydown', (e)=>{
+    if (e.key === 'ArrowLeft' || e.key === 'a') input.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') input.right = true;
+    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') input.jump = true;
+    if (e.key === 'e') tryPlace();
+    if (e.key === 'q') tryMine();
+    if (e.key === 'f') toggleFast();
+  });
+  addEventListener('keyup', (e)=>{
+    if (e.key === 'ArrowLeft' || e.key === 'a') input.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') input.right = false;
+  });
+
+  function toggleFast(){
+    fastMode = !fastMode;
+    fastSwitch.classList.toggle('on', fastMode);
+    fastBtn.textContent = `Hızlı Mod: ${fastMode ? 'Açık' : 'Kapalı'}`;
+    showToast(fastMode ? 'Hızlı mod açıldı' : 'Hızlı mod kapandı');
+  }
+  fastBtn.addEventListener('click', toggleFast);
+  fastSwitch.addEventListener('click', toggleFast);
+
+  chars.forEach(el => el.addEventListener('click', ()=>{
+    chars.forEach(c=>c.classList.remove('sel'));
+    el.classList.add('sel');
+    selectedChar = Number(el.dataset.char);
+    player.skin = CHARSET[selectedChar];
+  }));
+
+  function updateHUD(){
+    coordsEl.textContent = `X: ${Math.floor(player.x / WORLD.blockSize)} Y: ${Math.floor(player.y / WORLD.blockSize)}`;
+  }
+
+  function setNet(state, text){
+    netDot.classList.toggle('on', state);
+    netDot.classList.toggle('off', !state);
+    netText.textContent = text;
+  }
+
+  async function startMultiplayer(){
+    if (!db) { setNet(false, 'Offline'); return; }
+    try {
+      const room = roomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'').slice(0,18) || 'blox1';
+      const playersCol = collection(db, 'rooms', room, 'players');
+      myDocRef = doc(playersCol, uid);
+      await setDoc(myDocRef, {
+        name: playerName,
+        char: selectedChar,
+        x: player.x,
+        y: player.y,
+        dir: player.dir,
+        skin: player.skin,
+        fast: fastMode,
+        t: Date.now(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      setNet(true, `Oda: ${room}`);
+      unsubPlayers = onSnapshot(playersCol, (snap)=>{
+        const next = {};
+        const now = Date.now();
+        snap.forEach(d => {
+          const p = d.data();
+          if (d.id === uid) return;
+          if (!p || !p.t || now - p.t > 15000) return;
+          next[d.id] = p;
+        });
+        remotePlayers = next;
+        if (Object.keys(remotePlayers).length === 0) setNet(true, `Oda: ${room} (yalnız)`);
+        else setNet(true, `Oda: ${room} | ${Object.keys(remotePlayers).length} kişi`);
+      }, ()=>setNet(false, 'Bağlantı yok'));
+      syncTimer = setInterval(async ()=>{
+        if (!myDocRef) return;
+        try {
+          await setDoc(myDocRef, {
+            name: playerName,
+            char: selectedChar,
+            x: player.x,
+            y: player.y,
+            dir: player.dir,
+            skin: player.skin,
+            fast: fastMode,
+            t: Date.now(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (_) {}
+      }, 250);
+      addEventListener('beforeunload', cleanup, {once:true});
+    } catch (e) {
+      console.warn(e);
+      setNet(false, 'Firebase hata');
+    }
+  }
+
+  async function cleanup(){
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = null;
+    if (unsubPlayers) unsubPlayers();
+    unsubPlayers = null;
+    try { if (myDocRef) await deleteDoc(myDocRef); } catch(_) {}
+  }
+
+  startBtn.addEventListener('click', async ()=>{
+    playerName = (nameInput.value.trim() || 'Oyuncu').slice(0,14);
+    roomId = roomInput.value.trim() || 'blox1';
+    player.skin = CHARSET[selectedChar];
+    player.x = 8 * WORLD.blockSize;
+    player.y = 8 * WORLD.blockSize;
+    modal.classList.add('hide');
+    started = true;
+    ensureWorldAround(player.x);
+    await startMultiplayer();
+    showToast('Başladı');
+  });
+
+  // initial world
+  ensureWorldAround(player.x);
+
+  let last = performance.now();
+  function frame(now){
+    const dt = Math.min(0.033, (now - last) / 1000);
+    last = now;
+    if (started){
+      t += dt;
+      ensureWorldAround(player.x);
+      collisionMove(dt);
+      updateCamera();
+      updateHUD();
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // expose simple controls for debugging
+  window.__blox = {player, blocks, chunks, toggleFast};
 </script>
 </body>
 </html>
