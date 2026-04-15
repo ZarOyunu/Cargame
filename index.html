@@ -137,6 +137,21 @@
       max-width: 86vw; text-align: center;
     }
 
+    #hotbar {
+      position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+      z-index: 13; display: grid; grid-template-columns: repeat(9, minmax(42px, 1fr));
+      gap: 6px; width: min(92vw, 560px); pointer-events: auto;
+    }
+    .hotbar-slot {
+      height: 58px; border-radius: 14px; background: rgba(255,255,255,0.78);
+      border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 8px 18px rgba(0,0,0,.12);
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      font-size: 12px; font-weight: 800; color:#173d5c; user-select:none; cursor:pointer;
+    }
+    .hotbar-slot.selected { border-color:#1f79ff; box-shadow: 0 0 0 3px rgba(31,121,255,.18), 0 8px 18px rgba(0,0,0,.12); background: rgba(255,255,255,0.95); }
+    .hotbar-slot .ic { font-size: 18px; line-height: 1; margin-top: 2px; }
+    .hotbar-slot .ct { font-size: 11px; color:#1f79ff; margin-top:2px; }
+
     #chatBox {
       position: fixed; left: 14px; bottom: 160px; width: 260px; max-height: 150px; overflow-y: hidden;
       display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
@@ -221,6 +236,11 @@
       <div class="barWrap"><div class="bar" id="healthBar"></div></div>
       <div class="tiny" id="healthText" style="margin-top:6px;">100 / 100</div>
     </div>
+    <div class="hudBox">
+      <div style="font-weight:800; margin-bottom:4px;">Açlık</div>
+      <div class="barWrap"><div class="bar" id="hungerBar" style="background:#f59e0b;"></div></div>
+      <div class="tiny" id="hungerText" style="margin-top:6px;">100 / 100</div>
+    </div>
   </div>
 
   <div id="chatBox"></div>
@@ -229,6 +249,7 @@
   <div id="crosshair"></div>
   <div id="message"></div>
   <div id="breakBarWrap"><div id="breakBar"></div></div>
+  <div id="hotbar"></div>
 
   <div id="craftModal" class="modal-overlay">
     <div class="modal-card">
@@ -267,6 +288,7 @@
       <button class="action primary" id="jumpBtn">Zıpla</button>
       <button class="action danger" id="breakBtn">Kır</button>
       <button class="action place" id="placeBtn">Koy</button>
+      <button class="action good" id="eatBtn">Ye</button>
       <button class="action good" id="cameraBtn">Kamera</button>
       <button class="action warn" id="craftBtn">Craft</button>
       <button class="action bag" id="openInvBtn">🎒</button>
@@ -298,6 +320,9 @@
     const breakBarWrap = document.getElementById("breakBarWrap");
     const breakBar = document.getElementById("breakBar");
     const chatBox = document.getElementById("chatBox");
+    const hungerBar = document.getElementById("hungerBar");
+    const hungerText = document.getElementById("hungerText");
+    const hotbarEl = document.getElementById("hotbar");
 
     const CHUNK = 16;
     const VIEW = 2;
@@ -309,10 +334,14 @@
       yaw: 0, pitch: 0.08, shakeAmt: 0,
       moveX: 0, moveY: 0, joyX: 0, joyY: 0, keyX: 0, keyY: 0,
       placeMode: "plank",
-      inventory: { wood: 0, plank: 0, stone: 0, stick: 0, sand: 0, glass: 0, dirt: 0 },
+      hotbarSelected: 1,
+      hunger: 100, maxHunger: 100,
+      inventory: { wood: 0, plank: 0, stone: 0, stick: 0, sand: 0, glass: 0, dirt: 0, meat: 0 },
       tools: { pickaxe: false, axe: false, shovel: false, stonePickaxe: false, stoneAxe: false, stoneShovel: false },
       health: 100, maxHealth: 100,
       world: { chunks: new Map(), solid: new Map() },
+      animals: [],
+      drops: [],
       player: { x: 0, y: 15, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6, lastVy: 0 },
       breakState: { active: false, target: null, progress: 0, time: 0, pointerHeld: false }
     };
@@ -323,6 +352,20 @@
       { name: "Kaan", color: 0x3da7d8, speed: 5.4 },
       { name: "Ali", color: 0x4cc36b, speed: 5.8 }
     ];
+
+    const hotbarItems = ["wood", "plank", "stone", "dirt", "sand", "glass", "meat", "stick", "empty"];
+    const itemMeta = {
+      wood: { icon: "🪵", name: "Odun" },
+      plank: { icon: "🟫", name: "Tahta" },
+      stone: { icon: "🪨", name: "Taş" },
+      dirt: { icon: "🟤", name: "Toprak" },
+      sand: { icon: "🏖️", name: "Kum" },
+      glass: { icon: "🪟", name: "Cam" },
+      meat: { icon: "🍖", name: "Et" },
+      stick: { icon: "🦯", name: "Çubuk" },
+      empty: { icon: "⬚", name: "Boş" }
+    };
+    const placeableBlocks = new Set(["wood", "plank", "stone", "dirt", "sand", "glass"]);
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x6ea1c5, 1.25); scene.add(hemi);
     const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(80, 130, 50); scene.add(sun);
@@ -428,8 +471,23 @@
           addColumn(x, z, h, chunk);
 
           const treeRoll = hash2(x * 3, z * 3);
-          if ((treeRoll > 0.82 || hash2(x + 7, z + 13) > 0.94) && h >= SEA + 1) addTree(x, z, h, chunk);
+          if ((treeRoll > 0.74 || hash2(x + 7, z + 13) > 0.91) && h >= SEA + 1) addTree(x, z, h, chunk);
           if (hash2(x * 11, z * 13) > 0.98 && h >= 2) chunk.meshes.push(addMesh(stoneMat, x, h + 1, z, "stone", chunk.key));
+        }
+      }
+      const animalChance = hash2(cx * 41, cz * 53);
+      if (animalChance > 0.72) {
+        const localCount = animalChance > 0.94 ? 2 : 1;
+        for (let i = 0; i < localCount; i++) {
+          const lx = 2 + Math.floor(hash2(cx * 71 + i, cz * 73 + i) * 12);
+          const lz = 2 + Math.floor(hash2(cx * 79 + i, cz * 83 + i) * 12);
+          const x = baseX + lx, z = baseZ + lz;
+          const h = terrainHeight(x, z);
+          if (h >= SEA + 1) {
+            const kindRoll = hash2(cx * 97 + i, cz * 101 + i);
+            const kind = kindRoll > 0.72 ? "cow" : kindRoll > 0.42 ? "sheep" : "chicken";
+            spawnAnimal(kind, x, h + 0.5, z, key);
+          }
         }
       }
       state.world.chunks.set(key, chunk);
@@ -443,6 +501,14 @@
         if (mesh.userData.type !== "water") state.world.solid.delete(`${Math.round(mesh.position.x)},${Math.round(mesh.position.y)},${Math.round(mesh.position.z)}`);
         scene.remove(mesh);
       }
+      state.animals = state.animals.filter(a => {
+        if (a.userData?.chunkKey === key) { scene.remove(a); return false; }
+        return true;
+      });
+      state.drops = state.drops.filter(d => {
+        if (d.chunkKey === key && d.age > 2.5) { scene.remove(d.mesh); return false; }
+        return true;
+      });
       state.world.chunks.delete(key);
     }
 
@@ -485,6 +551,40 @@
       clearTimeout(showMsg.t); showMsg.t = setTimeout(() => message.style.opacity = 0, ms);
     }
 
+    function renderHotbar() {
+      if (!hotbarEl) return;
+      hotbarEl.innerHTML = "";
+      hotbarItems.forEach((id, idx) => {
+        const meta = itemMeta[id] || itemMeta.empty;
+        const count = id === "empty" ? "" : (state.inventory[id] || 0);
+        const slot = document.createElement("div");
+        slot.className = `hotbar-slot ${idx === state.hotbarSelected ? "selected" : ""}`;
+        slot.innerHTML = `<div>${idx + 1}</div><div class="ic">${meta.icon}</div><div>${meta.name}</div><div class="ct">${id === "empty" ? "-" : count}</div>`;
+        slot.onclick = () => selectHotbar(idx);
+        hotbarEl.appendChild(slot);
+      });
+      const placeBtn = document.getElementById("placeBtn");
+      if (placeBtn) placeBtn.textContent = state.placeMode === "meat" ? "Ye" : "Koy";
+    }
+
+    function selectHotbar(index) {
+      if (index < 0 || index >= hotbarItems.length) return;
+      state.hotbarSelected = index;
+      state.placeMode = hotbarItems[index];
+      renderHotbar();
+      if (placeableBlocks.has(state.placeMode)) showMsg(`${itemMeta[state.placeMode].name} seçildi`);
+      else if (state.placeMode === "meat") showMsg("Et seçildi");
+    }
+
+    function eatFood() {
+      if ((state.inventory.meat || 0) <= 0) return showMsg("Et yok!");
+      state.inventory.meat -= 1;
+      state.hunger = Math.min(state.maxHunger, state.hunger + 35);
+      updateHud();
+      renderHotbar();
+      showMsg("Et yedin!");
+    }
+
     function addChatMsg(sender, text, isSystem = false) {
       const div = document.createElement("div");
       div.className = `chat-msg ${isSystem ? "chat-sys" : ""}`;
@@ -504,6 +604,7 @@
         { id: "stick", name: "Çubuk", icon: "🦯" },
         { id: "sand", name: "Kum", icon: "🏖️" },
         { id: "dirt", name: "Toprak", icon: "🟤" },
+        { id: "meat", name: "Et", icon: "🍖" },
         { id: "glass", name: "Cam", icon: "🪟" }
       ];
       mList.forEach(m => {
@@ -526,14 +627,18 @@
       worldInfoBox.textContent = `🌍 Sunucu: ${state.worldName}`;
       healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
       healthText.textContent = `${Math.max(0, Math.floor(state.health))} / ${state.maxHealth}`;
+      if (hungerBar) hungerBar.style.width = `${Math.max(0, Math.min(100, state.hunger))}%`;
+      if (hungerText) hungerText.textContent = `${Math.max(0, Math.floor(state.hunger))} / ${state.maxHunger}`;
 
       if (state.health <= 0) {
         showMsg("ÖLDÜN! Yeniden doğuyorsun...");
-        addChatMsg("Sistem", `${chars[state.selectedChar].name} yüksekten düşerek öldü.`, true);
+        addChatMsg("Sistem", `${chars[state.selectedChar].name} öldü.`, true);
         state.health = 100;
+        state.hunger = 100;
         state.player.x = 0; state.player.y = 25; state.player.z = 0;
       }
       updateInvModal();
+      renderHotbar();
     }
 
     function renderCraftList() {
@@ -593,11 +698,11 @@
       if (!target || !target.face) return showMsg("Koyacak yüzey yok!");
 
       const placeType = state.placeMode;
-      const placeMap = { plank: plankMat, glass: glassMat, sand: sandMat, dirt: dirtMat, stone: stoneMat };
+      if (placeType === "meat") return eatFood();
+      if (!placeableBlocks.has(placeType)) return showMsg("Bu slottan blok koyulmaz!");
+      if ((state.inventory[placeType] || 0) <= 0) return showMsg(`${itemMeta[placeType].name} yok!`);
 
-      if (!placeMap[placeType]) return showMsg("Geçersiz blok türü!");
-      if ((state.inventory[placeType] || 0) <= 0) return showMsg(`${placeType} yok!`);
-
+      const placeMap = { wood: woodMat, plank: plankMat, glass: glassMat, sand: sandMat, dirt: dirtMat, stone: stoneMat };
       const pos = target.object.position.clone().add(target.face.normal);
       const bx = Math.round(pos.x), by = Math.round(pos.y), bz = Math.round(pos.z);
 
@@ -612,7 +717,142 @@
       const mesh = addMesh(placeMap[placeType], bx, by, bz, placeType, cKey);
       chunk.meshes.push(mesh);
       updateHud();
-      showMsg(`${placeType === "plank" ? "Tahta" : placeType === "sand" ? "Kum" : placeType === "dirt" ? "Toprak" : placeType === "stone" ? "Taş" : "Cam"} koydun.`);
+      showMsg(`${itemMeta[placeType].name} koydun.`);
+    }
+
+    function spawnDrop(item, x, y, z, amount = 1) {
+      const mats = {
+        wood: woodMat, plank: plankMat, stone: stoneMat, sand: sandMat, dirt: dirtMat, glass: glassMat,
+        meat: new THREE.MeshStandardMaterial({ color: 0x8b2d2d, roughness: 0.95 }),
+        stick: new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 0.95 })
+      };
+      for (let i = 0; i < amount; i++) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.28), mats[item] || stoneMat);
+        mesh.position.set(x + (Math.random() - 0.5) * 0.35, y + 0.6, z + (Math.random() - 0.5) * 0.35);
+        scene.add(mesh);
+        state.drops.push({ mesh, item, vx: (Math.random() - 0.5) * 1.25, vy: 2.2 + Math.random() * 0.9, vz: (Math.random() - 0.5) * 1.25, age: 0, life: 25, chunkKey: chunkKeyFn(worldToChunk(x), worldToChunk(z)) });
+      }
+    }
+
+    function spawnAnimal(kind, x, y, z, chunkKey) {
+      const group = new THREE.Group();
+      group.position.set(x, y, z);
+      group.userData = { type: "animalGroup", kind, health: kind === "cow" ? 4 : kind === "sheep" ? 3 : 2, chunkKey, wander: 0, tx: x, tz: z };
+      const colors = { cow: 0x8a6b4b, sheep: 0xf1f1f1, chicken: 0xf7d24d };
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colors[kind] || 0xffffff, roughness: 0.9 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.95 });
+      const accentMat = new THREE.MeshStandardMaterial({ color: kind === "chicken" ? 0xff8c3a : 0x553322, roughness: 0.9 });
+      let body;
+      if (kind === "cow") {
+        body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.7, 1.55), bodyMat);
+        body.position.y = 0.85;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.55, 0.65), bodyMat); head.position.set(0, 1.0, 1.05); group.add(head);
+        const nose = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.15), accentMat); nose.position.set(0, 0.82, 1.37); group.add(nose);
+      } else if (kind === "sheep") {
+        body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.75, 1.15), bodyMat); body.position.y = 0.82;
+        const wool = new THREE.Mesh(new THREE.SphereGeometry(0.48, 10, 10), bodyMat); wool.position.set(0, 1.18, 0.1); group.add(wool);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.45), darkMat); head.position.set(0, 0.95, 0.82); group.add(head);
+      } else {
+        body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.7), bodyMat); body.position.y = 0.52;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.26, 0.28), bodyMat); head.position.set(0, 0.63, 0.5); group.add(head);
+        const beak = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.16), accentMat); beak.position.set(0, 0.55, 0.68); group.add(beak);
+      }
+      group.add(body);
+      for (const sx of [-0.33, 0.33]) for (const sz of [-0.45, 0.45]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.45, 0.12), darkMat);
+        leg.position.set(sx, 0.23, sz); group.add(leg);
+      }
+      for (const m of group.children) { m.userData = { type: "animal", animalRef: group, kind }; }
+      scene.add(group);
+      state.animals.push(group);
+      return group;
+    }
+
+    function killAnimal(animal) {
+      if (!animal) return;
+      const kind = animal.userData?.kind || "cow";
+      const dropCount = kind === "cow" ? 2 : 1;
+      spawnDrop("meat", animal.position.x, animal.position.y + 0.6, animal.position.z, dropCount);
+      scene.remove(animal);
+      state.animals = state.animals.filter(a => a !== animal);
+      showMsg(kind === "cow" ? "İnek devrildi!" : kind === "sheep" ? "Koyun devrildi!" : "Tavuk devrildi!");
+    }
+
+    function updateAnimals(dt) {
+      for (const animal of [...state.animals]) {
+        const ud = animal.userData || {};
+        ud.wander = (ud.wander || 0) - dt;
+        const gy = getGroundHeight(animal.position.x, animal.position.z);
+        const terrainY = terrainHeight(Math.round(animal.position.x), Math.round(animal.position.z));
+        if (gy <= -19 || terrainY < SEA - 1) ud.wander = 0;
+        if (ud.wander <= 0) {
+          const ox = (Math.random() - 0.5) * 8;
+          const oz = (Math.random() - 0.5) * 8;
+          ud.tx = animal.position.x + ox;
+          ud.tz = animal.position.z + oz;
+          ud.wander = 2.2 + Math.random() * 2.8;
+          if (terrainHeight(Math.round(ud.tx), Math.round(ud.tz)) < SEA) {
+            ud.tx = animal.position.x - ox;
+            ud.tz = animal.position.z - oz;
+          }
+        }
+        const dx = ud.tx - animal.position.x;
+        const dz = ud.tz - animal.position.z;
+        const dist = Math.hypot(dx, dz);
+        const speed = ud.kind === "cow" ? 1.15 : ud.kind === "sheep" ? 1.35 : 1.7;
+        if (dist > 0.2) {
+          animal.position.x += (dx / dist) * speed * dt;
+          animal.position.z += (dz / dist) * speed * dt;
+          animal.rotation.y = Math.atan2(dx, dz);
+        }
+        const newGy = getGroundHeight(animal.position.x, animal.position.z);
+        if (newGy > -19) animal.position.y = newGy;
+      }
+    }
+
+    function updateDrops(dt) {
+      for (const drop of [...state.drops]) {
+        drop.age += dt;
+        if (drop.age > drop.life) {
+          scene.remove(drop.mesh);
+          state.drops = state.drops.filter(d => d !== drop);
+          continue;
+        }
+        const p = drop.mesh.position;
+        drop.vy -= 18 * dt;
+        const tH = terrainHeight(Math.round(p.x), Math.round(p.z));
+        const nearWater = tH < SEA + 1;
+        if (nearWater) {
+          let bestDX = 0, bestDZ = 0, bestScore = Infinity;
+          for (const [dx, dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+            const s = terrainHeight(Math.round(p.x + dx), Math.round(p.z + dz));
+            if (s < bestScore) { bestScore = s; bestDX = dx; bestDZ = dz; }
+          }
+          drop.vx += bestDX * 1.2 * dt;
+          drop.vz += bestDZ * 1.2 * dt;
+          drop.vy += 8.0 * dt;
+          drop.vx *= 0.995;
+          drop.vz *= 0.995;
+        }
+        p.x += drop.vx * dt;
+        p.y += drop.vy * dt;
+        p.z += drop.vz * dt;
+        const ground = getGroundHeight(p.x, p.z);
+        if (ground > -19 && p.y <= ground + 0.2) {
+          p.y = ground + 0.18;
+          drop.vy *= -0.18;
+          drop.vx *= 0.82;
+          drop.vz *= 0.82;
+        }
+        const d = Math.hypot(p.x - state.player.x, p.y - (state.player.y + 1), p.z - state.player.z);
+        if (d < 1.45) {
+          state.inventory[drop.item] = (state.inventory[drop.item] || 0) + 1;
+          scene.remove(drop.mesh);
+          state.drops = state.drops.filter(d2 => d2 !== drop);
+          updateInvModal();
+          renderHotbar();
+        }
+      }
     }
 
     function removeObject(obj) {
@@ -622,12 +862,11 @@
       if (state.world.solid.has(key)) state.world.solid.delete(key);
       scene.remove(obj);
 
-      if (data.type === "wood") state.inventory.wood += 1;
-      else if (data.type === "plank") state.inventory.plank += 1;
-      else if (data.type === "stone") state.inventory.stone += 1;
-      else if (data.type === "sand") state.inventory.sand += 1;
-      else if (data.type === "dirt") state.inventory.dirt += 1;
-      else if (data.type === "glass") state.inventory.glass += 1;
+      if (data.type === "wood" || data.type === "plank" || data.type === "stone" || data.type === "sand" || data.type === "dirt" || data.type === "glass") {
+        spawnDrop(data.type, data.x, data.y, data.z, 1);
+      } else if (data.type === "animal") {
+        killAnimal(data.animalRef);
+      }
       updateHud();
     }
 
@@ -655,7 +894,7 @@
       state.cameraMode = document.getElementById("thirdPerson").checked ? "third" : "first";
       playerBody.material.color.setHex(chars[state.selectedChar].color);
       document.getElementById("worldScreen").style.display = "none";
-      updateHud(); renderCraftList(); updateChunkStreaming(); startMultiplayerMock();
+      updateHud(); renderCraftList(); renderHotbar(); updateChunkStreaming(); startMultiplayerMock();
     };
 
     document.getElementById("closeCraft").onclick = () => document.getElementById("craftModal").style.display = "none";
@@ -671,6 +910,7 @@
         showMsg("Hızlı Atılma!");
       }
     };
+    document.getElementById("eatBtn").onclick = eatFood;
     document.getElementById("cameraBtn").onclick = () => { state.cameraMode = state.cameraMode === "third" ? "first" : "third"; };
     document.getElementById("craftBtn").onclick = () => document.getElementById("craftModal").style.display = "flex";
     document.getElementById("openInvBtn").onclick = () => { document.getElementById("invModal").style.display = "flex"; updateInvModal(); };
@@ -701,7 +941,7 @@
       const dx = e.clientX - joy.cx, dy = e.clientY - joy.cy, max = 44;
       const nx = Math.max(-max, Math.min(max, dx)), ny = Math.max(-max, Math.min(max, dy));
       stick.style.transform = `translate(${nx}px, ${ny}px)`;
-      state.joyX = nx / max; state.joyY = -ny / max;
+      state.joyX = -nx / max; state.joyY = -ny / max;
     });
     function endJoy(e) { if (e.pointerId !== joy.id) return; joy.active = false; state.joyX = 0; state.joyY = 0; stick.style.transform = "translate(0px, 0px)"; syncMovementInput(); }
     joystick.addEventListener("pointerup", endJoy); joystick.addEventListener("pointercancel", endJoy);
@@ -721,8 +961,11 @@
     const keys = {};
     window.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
+      const n = Number(e.key);
+      if (n >= 1 && n <= 9) selectHotbar(n - 1);
       if (e.key === " ") document.getElementById("jumpBtn").click();
       if (e.key.toLowerCase() === "r") placeBlock();
+      if (e.key.toLowerCase() === "e") eatFood();
       if (e.key.toLowerCase() === "c") document.getElementById("cameraBtn").click();
       if (e.key.toLowerCase() === "i") document.getElementById("openInvBtn").click();
       if (e.key.toLowerCase() === "f") document.getElementById("fwdJumpBtn").click();
@@ -761,7 +1004,8 @@
       const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
       const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
       const input = new THREE.Vector3().addScaledVector(forward, state.moveY).addScaledVector(right, state.moveX);
-      if (input.lengthSq() > 0) input.normalize().multiplyScalar(state.player.speed);
+      const hungerFactor = 0.55 + (state.hunger / state.maxHunger) * 0.45;
+      if (input.lengthSq() > 0) input.normalize().multiplyScalar(state.player.speed * hungerFactor);
 
       const accel = state.player.onGround ? 38 : 10;
       state.player.vx += (input.x - state.player.vx) * Math.min(1, accel * dt);
@@ -847,6 +1091,9 @@
 
       applyKeyboard(); syncMovementInput();
 
+      state.hunger = Math.max(0, state.hunger - dt * 0.55);
+      if (state.hunger <= 0) state.health = Math.max(0, state.health - dt * 4.5);
+
       const tRay = getTargetRay();
       if (tRay && tRay.object.userData?.type && tRay.object.userData.type !== "water") {
         targetOutline.position.copy(tRay.object.position);
@@ -860,6 +1107,8 @@
       updateMovement(dt);
       updateChunkStreaming();
       updateEnvironment(dt);
+      updateAnimals(dt);
+      updateDrops(dt);
 
       playerGroup.position.set(state.player.x, 0, state.player.z); playerGroup.rotation.y = state.yaw;
       updateCamera();
@@ -872,8 +1121,13 @@
         if (pct >= 1) { removeObject(state.breakState.target); stopBreaking(); showMsg("Kırıldı!"); }
       }
 
+      updateHud();
       renderer.render(scene, camera);
     }
+
+    renderHotbar();
+    selectHotbar(state.hotbarSelected);
+    updateHud();
 
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
