@@ -11,13 +11,13 @@
       touch-action: none; user-select: none; -webkit-user-select: none;
     }
     #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-    
+
     .screen-overlay {
       position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
       z-index: 30; background: radial-gradient(circle at top, rgba(255,255,255,0.92), rgba(145,205,255,0.96));
     }
     #worldScreen { display: none; z-index: 35; }
-    
+
     .card {
       width: min(980px, 94vw); background: rgba(255,255,255,0.90); backdrop-filter: blur(8px);
       border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.18); border: 1px solid rgba(255,255,255,0.68);
@@ -38,14 +38,14 @@
     .name { font-weight: 800; color: #173d5c; }
     .desc { font-size: 12px; color: #587086; margin-top: 4px; }
     .row { display:flex; flex-wrap:wrap; gap: 10px; align-items:center; }
-    
+
     .btn {
       pointer-events: auto; border: 0; border-radius: 14px; padding: 12px 15px; background: #1f79ff;
       color: white; font-weight: 800; box-shadow: 0 10px 22px rgba(31,121,255,0.25); cursor: pointer;
     }
     .btn.secondary { background: #eff6ff; color: #194264; box-shadow: none; border: 1px solid #d7e8ff; }
     .btn.success { background: #1eaa63; color: white; }
-    
+
     .toggle {
       display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.72);
       border: 1px solid rgba(0,0,0,0.07); border-radius: 999px; padding: 10px 12px; color: #1f4058; font-weight: 700;
@@ -54,14 +54,14 @@
       padding: 12px; border-radius: 12px; border: 1px solid #c2dcf0; width: 100%; box-sizing: border-box;
       font-size: 16px; font-weight: bold; color: #144d7b; margin-bottom: 10px; outline: none;
     }
-    
+
     .world-list { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; max-height: 200px; overflow-y: auto; }
     .world-item {
       background: #f4f9ff; border: 1px solid #dcebfa; padding: 12px; border-radius: 12px; display: flex;
       justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s;
     }
     .world-item:hover { background: #e6f0ff; border-color: #b3d4ff; }
-    
+
     #hud {
       position: fixed; left: 12px; top: 12px; z-index: 10; display: flex; flex-direction: column; gap: 8px; pointer-events: none;
       width: min(290px, calc(100vw - 24px));
@@ -69,10 +69,11 @@
     .hudBox {
       background: rgba(255,255,255,0.82); border: 1px solid rgba(255,255,255,0.75); border-radius: 16px;
       padding: 10px 12px; color: #163d58; box-shadow: 0 10px 25px rgba(0,0,0,0.08); font-size: 13px;
+      backdrop-filter: blur(4px);
     }
     .barWrap { margin-top: 8px; background: rgba(0,0,0,0.09); border-radius: 999px; overflow: hidden; height: 12px; }
-    .bar { height: 100%; width: 100%; border-radius: 999px; transition: width .08s linear; }
-    
+    .bar { height: 100%; width: 100%; border-radius: 999px; transition: width .08s linear; background: #ef4444;}
+
     #crosshair {
       position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin-left: -9px; margin-top: -9px;
       z-index: 9; pointer-events: none; opacity: .85;
@@ -82,30 +83,32 @@
     }
     #crosshair:before { width: 18px; height: 2px; }
     #crosshair:after { width: 2px; height: 18px; }
-    
+
     #mobileUI { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
     #joystick {
-      position: absolute; left: 18px; bottom: 18px; width: 128px; height: 128px; border-radius: 50%;
+      position: absolute; left: 18px; bottom: 18px; width: 130px; height: 130px; border-radius: 50%;
       background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.25); pointer-events: auto; touch-action: none;
+      backdrop-filter: blur(4px);
     }
     #stick {
-      position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin-left: -26px; margin-top: -26px;
+      position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin-left: -28px; margin-top: -28px;
       border-radius: 50%; background: rgba(255,255,255,0.70); box-shadow: 0 8px 18px rgba(0,0,0,0.12);
     }
     #buttons {
-      position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; pointer-events: auto;
+      position: absolute; right: 14px; bottom: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; pointer-events: auto;
     }
     .action {
-      min-width: 65px; min-height: 54px; border: 0; border-radius: 16px; background: rgba(255,255,255,0.8);
-      color: #143a54; font-weight: 800; box-shadow: 0 8px 18px rgba(0,0,0,0.12); touch-action: manipulation;
+      min-width: 60px; min-height: 54px; border: 0; border-radius: 16px; background: rgba(255,255,255,0.8);
+      color: #143a54; font-weight: 800; box-shadow: 0 8px 18px rgba(0,0,0,0.12); touch-action: manipulation; font-size: 13px;
     }
     .action.primary { background: #1f79ff; color: white; }
     .action.good { background: #1eaa63; color: white; }
     .action.warn { background: #ff8b2b; color: white; }
     .action.danger { background: #ef4444; color: white; }
     .action.bag { background: #8b5cf6; color: white; }
-    .action.place { background: #3b82f6; color: white; } /* YENİ KOY BUTONU */
-    
+    .action.place { background: #3b82f6; color: white; }
+    .action.dash { background: #0ea5e9; color: white; grid-column: span 3; padding: 10px; }
+
     .modal-overlay {
       position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(7, 20, 30, 0.50);
       z-index: 25; pointer-events: auto;
@@ -119,7 +122,7 @@
       background: #f4f9ff; margin-top: 10px; border: 1px solid #dcebfa;
     }
     .tiny { font-size: 12px; color: #5c7486; line-height: 1.4; }
-    
+
     .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 10px; }
     .inv-slot {
       background: #eef6ff; border: 2px dashed #b3d4ff; border-radius: 12px; padding: 15px; text-align: center;
@@ -127,12 +130,26 @@
     }
     .inv-slot.has-item { border-style: solid; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
     .inv-count { font-size: 20px; color: #1f79ff; }
-    
+
     #message {
       position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%); z-index: 15; background: rgba(0,0,0,0.60);
       color: white; padding: 10px 14px; border-radius: 999px; font-size: 13px; pointer-events: none; opacity: 0; transition: opacity .2s ease;
       max-width: 86vw; text-align: center;
     }
+
+    #chatBox {
+      position: fixed; left: 14px; bottom: 160px; width: 260px; max-height: 150px; overflow-y: hidden;
+      display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+      pointer-events: none; z-index: 11;
+    }
+    .chat-msg {
+      background: rgba(0,0,0,0.5); color: white; padding: 6px 10px; border-radius: 8px;
+      font-size: 13px; font-weight: 600; text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+      animation: fadein 0.3s forwards;
+    }
+    .chat-sys { color: #facc15; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
     #hint {
       position: fixed; right: 12px; top: 12px; z-index: 10; pointer-events: none; background: rgba(255,255,255,0.78);
       border-radius: 14px; padding: 10px 12px; color: #285067; max-width: 240px; font-size: 12px; line-height: 1.4;
@@ -143,7 +160,20 @@
       z-index: 14; opacity: 0; pointer-events: none;
     }
     #breakBar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffb347, #ff5f6d); border-radius: 999px; }
-    @media (max-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } #hint { display: none; } .card { padding: 14px; } #buttons { grid-template-columns: repeat(3, 1fr); } }
+
+    #placePicker {
+      position: fixed; right: 12px; bottom: 112px; z-index: 12; display: flex; gap: 6px; flex-wrap: wrap;
+      pointer-events: auto; justify-content: flex-end; width: min(260px, 44vw);
+    }
+    #placePicker .action { min-width: 58px; min-height: 42px; padding: 8px 10px; font-size: 12px; }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      #hint { display: none; }
+      .card { padding: 14px; }
+      #chatBox { bottom: 170px; left: 10px; width: 220px; font-size: 12px;}
+      #placePicker { bottom: 106px; width: 220px; }
+    }
   </style>
 </head>
 <body>
@@ -152,12 +182,12 @@
   <div id="startScreen" class="screen-overlay">
     <div class="card">
       <h1 class="title">BloxCraft 3D Survival</h1>
-      <p class="sub">Gerçek fizik, blok koyabilme ve düşebileceğin çukurlar eklendi. Karakterini seç!</p>
+      <p class="sub">Çok oyunculu hissi, düşme hasarı, cam/kum üretimi ve yepyeni mekanikler eklendi. Maceraya atıl!</p>
       <div class="grid" id="charGrid">
-        <button class="char selected" data-char="0"><div class="avatar" style="background:#f08b8b;">A</div><div><div class="name">Alin</div><div class="desc">Kız • dengeli</div></div></button>
-        <button class="char" data-char="1"><div class="avatar" style="background:#7e87ff;">M</div><div><div class="name">Mira</div><div class="desc">Kız • hızlı</div></div></button>
-        <button class="char" data-char="2"><div class="avatar" style="background:#3da7d8;">K</div><div><div class="name">Kaan</div><div class="desc">Erkek • güçlü</div></div></button>
-        <button class="char" data-char="3"><div class="avatar" style="background:#4cc36b;">E</div><div><div class="name">Efe</div><div class="desc">Erkek • dayanıklı</div></div></button>
+        <button class="char selected" data-char="0"><div class="avatar" style="background:#f08b8b;">E</div><div><div class="name">Ege</div><div class="desc">Sunucu Kurucusu • Hızlı & Güçlü</div></div></button>
+        <button class="char" data-char="1"><div class="avatar" style="background:#7e87ff;">M</div><div><div class="name">Mira</div><div class="desc">Kız • Hızlı</div></div></button>
+        <button class="char" data-char="2"><div class="avatar" style="background:#3da7d8;">K</div><div><div class="name">Kaan</div><div class="desc">Erkek • Güçlü</div></div></button>
+        <button class="char" data-char="3"><div class="avatar" style="background:#4cc36b;">A</div><div><div class="name">Ali</div><div class="desc">Erkek • Dayanıklı</div></div></button>
       </div>
       <div class="row" style="margin-bottom:12px">
         <label class="toggle"><input type="checkbox" id="fastMode" checked /> Hızlı mod</label>
@@ -171,27 +201,31 @@
 
   <div id="worldScreen" class="screen-overlay">
     <div class="card">
-      <h1 class="title">Dünya Seçimi</h1>
+      <h1 class="title">Sunucu Seçimi</h1>
       <div style="background:#f4f9ff; padding:15px; border-radius:16px; border:1px solid #dcebfa; margin-bottom:15px;">
-        <input type="text" id="worldNameInput" class="input-field" placeholder="Örn: Ada, Belediye..." />
-        <button class="btn success" id="createWorldBtn" style="width:100%">Yeni Dünya Kur & Başla</button>
+        <input type="text" id="worldNameInput" class="input-field" placeholder="Örn: Sunucum..." value="Sunucum" />
+        <button class="btn success" id="createWorldBtn" style="width:100%">Sunucuya Bağlan & Başla</button>
       </div>
-      <div style="font-weight:900; color:#153d5c; margin-top:10px;">Mevcut Dünyalarınız:</div>
-      <div class="world-list" id="worldListContainer"></div>
+      <div style="font-weight:900; color:#153d5c; margin-top:10px;">Geçmiş Sunucularınız:</div>
+      <div class="world-list" id="worldListContainer">
+         <div class="world-item"><div>Aternos_Survival_1</div><div style="color:#1eaa63; font-weight:bold;">Online</div></div>
+      </div>
     </div>
   </div>
 
   <div id="hud">
     <div class="hudBox" id="statsBox">Yükleniyor...</div>
-    <div class="hudBox" id="worldInfoBox" style="font-weight:bold; color:#1f79ff;">Dünya: Yükleniyor</div>
+    <div class="hudBox" id="worldInfoBox" style="font-weight:bold; color:#1f79ff;">Sunucu: Yükleniyor</div>
     <div class="hudBox">
       <div style="font-weight:800; margin-bottom:4px;">Can</div>
       <div class="barWrap"><div class="bar" id="healthBar"></div></div>
       <div class="tiny" id="healthText" style="margin-top:6px;">100 / 100</div>
     </div>
   </div>
-  
-  <div id="hint">Yön Tuşları / Joystick ile yürü. Farenin Sol tuşu KIR, Sağ Tuşu (veya Koy Butonu) blok KOY. I tuşu çanta.</div>
+
+  <div id="chatBox"></div>
+
+  <div id="hint">Yön Tuşları/Joystick ile yürü. Sol Tık: KIR, Sağ Tık: KOY. I: Çanta. C: Kamera. R: Koy</div>
   <div id="crosshair"></div>
   <div id="message"></div>
   <div id="breakBarWrap"><div id="breakBar"></div></div>
@@ -199,7 +233,7 @@
   <div id="craftModal" class="modal-overlay">
     <div class="modal-card">
       <div class="row" style="justify-content:space-between; margin-bottom:8px">
-        <div><div style="font-size:22px; font-weight:900; color:#153d5c">Crafting Table</div><div class="tiny">Tahta yap ve onlarla inşa et!</div></div>
+        <div><div style="font-size:22px; font-weight:900; color:#153d5c">Çalışma Masası (Crafting)</div><div class="tiny">Malzemeleri dönüştür.</div></div>
         <button class="btn secondary" id="closeCraft">Kapat</button>
       </div>
       <div id="craftList"></div>
@@ -219,6 +253,14 @@
     </div>
   </div>
 
+  <div id="placePicker">
+    <button class="action place" data-place="plank">Tahta</button>
+    <button class="action warn" data-place="sand">Kum</button>
+    <button class="action good" data-place="dirt">Toprak</button>
+    <button class="action danger" data-place="stone">Taş</button>
+    <button class="action primary" data-place="glass">Cam</button>
+  </div>
+
   <div id="mobileUI">
     <div id="joystick"><div id="stick"></div></div>
     <div id="buttons">
@@ -227,7 +269,8 @@
       <button class="action place" id="placeBtn">Koy</button>
       <button class="action good" id="cameraBtn">Kamera</button>
       <button class="action warn" id="craftBtn">Craft</button>
-      <button class="action bag" id="openInvBtn">🎒 Çanta</button>
+      <button class="action bag" id="openInvBtn">🎒</button>
+      <button class="action dash" id="fwdJumpBtn">🚀 İleri Zıpla (Dash)</button>
     </div>
   </div>
 
@@ -241,7 +284,8 @@
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0xaad8ff, 28, 220);
+    scene.background = new THREE.Color(0xaad8ff);
+    scene.fog = new THREE.Fog(0xaad8ff, 28, 180);
 
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 900);
     const clock = new THREE.Clock();
@@ -253,29 +297,31 @@
     const healthText = document.getElementById("healthText");
     const breakBarWrap = document.getElementById("breakBarWrap");
     const breakBar = document.getElementById("breakBar");
+    const chatBox = document.getElementById("chatBox");
 
     const CHUNK = 16;
     const VIEW = 2;
-    const SEA = 1;
+    const SEA = 2;
 
     const state = {
-      worldName: "Varsayılan", worldSeed: 0,
+      worldName: "Varsayılan", worldSeed: 0, timeOfDay: 0,
       selectedChar: 0, cameraMode: "third",
-      yaw: 0, pitch: 0.08,
+      yaw: 0, pitch: 0.08, shakeAmt: 0,
       moveX: 0, moveY: 0, joyX: 0, joyY: 0, keyX: 0, keyY: 0,
-      inventory: { wood: 0, plank: 0, stone: 0, stick: 0 },
+      placeMode: "plank",
+      inventory: { wood: 0, plank: 0, stone: 0, stick: 0, sand: 0, glass: 0, dirt: 0 },
       tools: { pickaxe: false, axe: false, shovel: false, stonePickaxe: false, stoneAxe: false, stoneShovel: false },
       health: 100, maxHealth: 100,
-      world: { chunks: new Map(), solid: new Map() }, // Voxel haritası
-      player: { x: 0, y: 15, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6 },
+      world: { chunks: new Map(), solid: new Map() },
+      player: { x: 0, y: 15, z: 0, vx: 0, vy: 0, vz: 0, onGround: false, speed: 5.6, lastVy: 0 },
       breakState: { active: false, target: null, progress: 0, time: 0, pointerHeld: false }
     };
 
     const chars = [
-      { name: "Alin", color: 0xf08b8b, speed: 5.6 },
+      { name: "Ege", color: 0xf08b8b, speed: 6.2 },
       { name: "Mira", color: 0x7e87ff, speed: 6.2 },
       { name: "Kaan", color: 0x3da7d8, speed: 5.4 },
-      { name: "Efe", color: 0x4cc36b, speed: 5.8 }
+      { name: "Ali", color: 0x4cc36b, speed: 5.8 }
     ];
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x6ea1c5, 1.25); scene.add(hemi);
@@ -296,11 +342,11 @@
     const waterMat = new THREE.MeshStandardMaterial({ color: 0x66aaff, transparent: true, opacity: 0.55, roughness: 0.4 });
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a5a36, roughness: 1 });
     const leafMat = new THREE.MeshStandardMaterial({ color: 0x3d9c4c, roughness: 1 });
-    const plankMat = new THREE.MeshStandardMaterial({ color: 0xc88c51, roughness: 0.9 }); // KOYULACAK TAHTA
+    const plankMat = new THREE.MeshStandardMaterial({ color: 0xc88c51, roughness: 0.9 });
+    const sandMat = new THREE.MeshStandardMaterial({ color: 0xeedd99, roughness: 1 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.4, roughness: 0.1 });
 
     const cubeGeo = new THREE.BoxGeometry(1, 1, 1);
-
-    // HEDEF GÖSTERİCİ (Voxel Oyun Kutusu)
     const highlightGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02));
     const highlightMat = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
     const targetOutline = new THREE.LineSegments(highlightGeo, highlightMat);
@@ -312,6 +358,7 @@
       let n = x * 374761393 + z * 668265263;
       n = (n ^ (n >> 13)) * 1274126177; return ((n ^ (n >> 16)) >>> 0) / 4294967295;
     }
+
     function terrainHeight(x, z) {
       const n1 = Math.sin(x * 0.08) * 2.1 + Math.cos(z * 0.07) * 2.0;
       const n2 = Math.sin((x + z) * 0.045) * 1.7;
@@ -320,7 +367,6 @@
       return Math.max(1, Math.floor(4 + n1 + n2 + n3 + n4));
     }
 
-    // VOXEL KOORDİNAT SİSTEMİ (Tam sayılar)
     function addMesh(mat, x, y, z, type, chunkKey) {
       const mesh = new THREE.Mesh(cubeGeo, mat);
       mesh.position.set(x, y, z);
@@ -335,7 +381,8 @@
     function addColumn(x, z, h, chunk) {
       for (let y = 0; y <= h; y++) {
         let mat = grassMat, type = "grass";
-        if (y < h - 2) { mat = stoneMat; type = "stone"; }
+        if (h <= SEA + 1 && y === h) { mat = sandMat; type = "sand"; }
+        else if (y < h - 2) { mat = stoneMat; type = "stone"; }
         else if (y < h) { mat = dirtMat; type = "dirt"; }
         chunk.meshes.push(addMesh(mat, x, y, z, type, chunk.key));
       }
@@ -344,18 +391,28 @@
 
     function addTree(x, z, groundY, chunk) {
       const trunkH = 4 + Math.floor(hash2(x, z) * 4);
-      const trunkLean = hash2(z, x) > 0.72 ? 1 : 0;
+      const trunkLean = hash2(z, x) > 0.78 ? 1 : 0;
       for (let i = 1; i <= trunkH; i++) {
         chunk.meshes.push(addMesh(woodMat, x + trunkLean, groundY + i, z, "wood", chunk.key));
       }
-      const crownY = groundY + trunkH + 1;
-      const leafSets = [[[0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1]]];
-      for (const [dx, dy, dz] of leafSets[0]) {
-        chunk.meshes.push(addMesh(leafMat, x + dx + trunkLean, crownY + dy, z + dz, "leaf", chunk.key));
+      const topY = groundY + trunkH + 1;
+      const leafCoords = [
+        [0,0,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],
+        [0,1,0],[1,1,0],[-1,1,0],[0,1,1],[0,1,-1],
+        [1,0,1],[1,0,-1],[-1,0,1],[-1,0,-1],
+        [0,2,0],[1,2,0],[-1,2,0],[0,2,1],[0,2,-1]
+      ];
+      for (const [dx, dy, dz] of leafCoords) {
+        chunk.meshes.push(addMesh(leafMat, x + dx + trunkLean, topY + dy, z + dz, "leaf", chunk.key));
+      }
+      if (hash2(x + 19, z - 11) > 0.72) {
+        chunk.meshes.push(addMesh(leafMat, x + 2 + trunkLean, topY + 1, z, "leaf", chunk.key));
+        chunk.meshes.push(addMesh(leafMat, x - 2 + trunkLean, topY + 1, z, "leaf", chunk.key));
       }
     }
 
     function chunkKey(cx, cz) { return `${cx},${cz}`; }
+    function chunkKeyFn(cx, cz) { return `${cx},${cz}`; }
     function worldToChunk(n) { return Math.floor(n / CHUNK); }
 
     function generateChunk(cx, cz) {
@@ -371,7 +428,7 @@
           addColumn(x, z, h, chunk);
 
           const treeRoll = hash2(x * 3, z * 3);
-          if (treeRoll > 0.90 && h >= 2) addTree(x, z, h, chunk);
+          if ((treeRoll > 0.82 || hash2(x + 7, z + 13) > 0.94) && h >= SEA + 1) addTree(x, z, h, chunk);
           if (hash2(x * 11, z * 13) > 0.98 && h >= 2) chunk.meshes.push(addMesh(stoneMat, x, h + 1, z, "stone", chunk.key));
         }
       }
@@ -383,7 +440,7 @@
       const chunk = state.world.chunks.get(key);
       if (!chunk) return;
       for (const mesh of chunk.meshes) {
-        if(mesh.userData.type !== "water") state.world.solid.delete(`${Math.round(mesh.position.x)},${Math.round(mesh.position.y)},${Math.round(mesh.position.z)}`);
+        if (mesh.userData.type !== "water") state.world.solid.delete(`${Math.round(mesh.position.x)},${Math.round(mesh.position.y)},${Math.round(mesh.position.z)}`);
         scene.remove(mesh);
       }
       state.world.chunks.delete(key);
@@ -402,17 +459,13 @@
       for (const key of [...state.world.chunks.keys()]) if (!keep.has(key)) unloadChunk(key);
     }
 
-    // YENİ ÇARPIŞMA (COLLISION) SİSTEMİ - BLOKLARI KONTROL EDER
     function getGroundHeight(x, z) {
       const bx = Math.round(x);
       const bz = Math.round(z);
-      // Oyuncunun bulunduğu seviyeden aşağı doğru gerçek blokları tara
-      for(let y = Math.floor(state.player.y + 1); y >= -10; y--) {
-         if(state.world.solid.has(`${bx},${y},${bz}`)) {
-            return y + 0.5; // Bloğun üst sınırı
-         }
+      for (let y = Math.floor(state.player.y + 1); y >= -15; y--) {
+        if (state.world.solid.has(`${bx},${y},${bz}`)) return y + 0.5;
       }
-      return -10; // Sonsuz boşluğa düşme limiti
+      return -20;
     }
 
     function getTargetRay() {
@@ -432,30 +485,65 @@
       clearTimeout(showMsg.t); showMsg.t = setTimeout(() => message.style.opacity = 0, ms);
     }
 
-    function updateHud() {
-      statsBox.innerHTML = `Karakter: <b>${chars[state.selectedChar].name}</b>`;
-      worldInfoBox.textContent = `🌍 Dünya: ${state.worldName}`;
-      healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
-      healthText.textContent = `${Math.max(0, Math.floor(state.health))} / ${state.maxHealth}`;
-      updateInvModal();
+    function addChatMsg(sender, text, isSystem = false) {
+      const div = document.createElement("div");
+      div.className = `chat-msg ${isSystem ? "chat-sys" : ""}`;
+      div.textContent = isSystem ? text : `[${sender}]: ${text}`;
+      chatBox.appendChild(div);
+      if (chatBox.children.length > 5) chatBox.removeChild(chatBox.firstChild);
+      setTimeout(() => { if (div.parentNode) div.parentNode.removeChild(div); }, 8000);
     }
 
     function updateInvModal() {
       const mats = document.getElementById("invMats"), tools = document.getElementById("invTools");
       mats.innerHTML = ""; tools.innerHTML = "";
-      const mList = [{ id: "wood", name: "Odun", icon: "🪵" }, { id: "plank", name: "Tahta", icon: "🟫" }, { id: "stone", name: "Taş", icon: "🪨" }, { id: "stick", name: "Çubuk", icon: "🦯" }];
+      const mList = [
+        { id: "wood", name: "Odun", icon: "🪵" },
+        { id: "plank", name: "Tahta", icon: "🟫" },
+        { id: "stone", name: "Taş", icon: "🪨" },
+        { id: "stick", name: "Çubuk", icon: "🦯" },
+        { id: "sand", name: "Kum", icon: "🏖️" },
+        { id: "dirt", name: "Toprak", icon: "🟤" },
+        { id: "glass", name: "Cam", icon: "🪟" }
+      ];
       mList.forEach(m => {
-        const c = state.inventory[m.id];
-        mats.innerHTML += `<div class="inv-slot ${c>0?'has-item':''}"><div>${m.icon}</div><div>${m.name}</div><div class="inv-count">${c}</div></div>`;
+        const c = state.inventory[m.id] || 0;
+        mats.innerHTML += `<div class="inv-slot ${c > 0 ? 'has-item' : ''}"><div>${m.icon}</div><div>${m.name}</div><div class="inv-count">${c}</div></div>`;
       });
+      const tList = [
+        { id: "stonePickaxe", name: "Taş Kazma", icon: "⛏️" },
+        { id: "stoneAxe", name: "Taş Balta", icon: "🪓" },
+        { id: "stoneShovel", name: "Taş Kürek", icon: "🧹" }
+      ];
+      tList.forEach(t => {
+        const has = !!state.tools[t.id];
+        tools.innerHTML += `<div class="inv-slot ${has ? 'has-item' : ''}"><div>${t.icon}</div><div>${t.name}</div><div class="inv-count">${has ? "✓" : "×"}</div></div>`;
+      });
+    }
+
+    function updateHud() {
+      statsBox.innerHTML = `Karakter: <b>${chars[state.selectedChar].name}</b>`;
+      worldInfoBox.textContent = `🌍 Sunucu: ${state.worldName}`;
+      healthBar.style.width = `${Math.max(0, Math.min(100, state.health))}%`;
+      healthText.textContent = `${Math.max(0, Math.floor(state.health))} / ${state.maxHealth}`;
+
+      if (state.health <= 0) {
+        showMsg("ÖLDÜN! Yeniden doğuyorsun...");
+        addChatMsg("Sistem", `${chars[state.selectedChar].name} yüksekten düşerek öldü.`, true);
+        state.health = 100;
+        state.player.x = 0; state.player.y = 25; state.player.z = 0;
+      }
+      updateInvModal();
     }
 
     function renderCraftList() {
       const recipes = [
-        { name: "Odunu Tahtaya Çevir", need: { wood: 1 }, out: { plank: 4 }, note: "Binalar için tahta üret. (KOYULABİLİR)" },
+        { name: "Odunu Tahtaya Çevir", need: { wood: 1 }, out: { plank: 4 }, note: "Binalar için tahta üret." },
         { name: "Çubuk", need: { plank: 2 }, out: { stick: 4 }, note: "Alet sapı." },
+        { name: "Kumu Cama Çevir (Fırınsız)", need: { sand: 2 }, out: { glass: 1 }, note: "Pencereler için cam yap." },
         { name: "Taş Kazma", need: { stone: 3, stick: 2 }, out: { tool: "stonePickaxe" }, note: "Taşları hızlı kırar." },
-        { name: "Taş Balta", need: { stone: 3, stick: 2 }, out: { tool: "stoneAxe" }, note: "Ağaçları hızlı keser." }
+        { name: "Taş Balta", need: { stone: 3, stick: 2 }, out: { tool: "stoneAxe" }, note: "Ağaçları hızlı keser." },
+        { name: "Taş Kürek", need: { stone: 2, stick: 2 }, out: { tool: "stoneShovel" }, note: "Toprak ve kum için." }
       ];
       const cl = document.getElementById("craftList"); cl.innerHTML = "";
       recipes.forEach((r) => {
@@ -469,15 +557,23 @@
     function craft(recipe) {
       for (const [k, v] of Object.entries(recipe.need)) if ((state.inventory[k] || 0) < v) return showMsg("Malzeme eksik.");
       for (const [k, v] of Object.entries(recipe.need)) state.inventory[k] -= v;
+
       if (recipe.out.tool) state.tools[recipe.out.tool] = true;
       if (recipe.out.stick) state.inventory.stick += recipe.out.stick;
       if (recipe.out.plank) state.inventory.plank += recipe.out.plank;
+      if (recipe.out.glass) state.inventory.glass += recipe.out.glass;
+
       updateHud(); renderCraftList(); showMsg(`${recipe.name} yapıldı!`);
     }
 
     function breakTimeFor(type) {
-      let tBonus = type==="stone"&&state.tools.stonePickaxe?0.2 : type==="wood"&&state.tools.stoneAxe?0.2 : 1.0;
-      return (type === "stone" ? 1.3 : type === "wood" ? 1.0 : 0.5) * tBonus;
+      const toolBonus =
+        type === "stone" && state.tools.stonePickaxe ? 0.2 :
+        type === "wood" && state.tools.stoneAxe ? 0.2 :
+        type === "dirt" && state.tools.stoneShovel ? 0.25 :
+        type === "sand" && state.tools.stoneShovel ? 0.15 :
+        1.0;
+      return (type === "stone" ? 1.3 : type === "wood" ? 1.0 : type === "sand" ? 0.3 : type === "glass" ? 0.2 : type === "dirt" ? 0.45 : 0.5) * toolBonus;
     }
 
     function startBreaking() {
@@ -492,33 +588,32 @@
       breakBarWrap.style.opacity = 0; breakBar.style.width = "0%";
     }
 
-    // YENİ: BLOK KOYMA FONKSİYONU
     function placeBlock() {
       const target = getTargetRay();
       if (!target || !target.face) return showMsg("Koyacak yüzey yok!");
-      if (state.inventory.plank <= 0) return showMsg("Tahtan bitti! Ağaç kesip Craft'tan çevir.");
 
-      // Yüzeyin normalini alarak yeni bloğun merkez noktasını buluyoruz
+      const placeType = state.placeMode;
+      const placeMap = { plank: plankMat, glass: glassMat, sand: sandMat, dirt: dirtMat, stone: stoneMat };
+
+      if (!placeMap[placeType]) return showMsg("Geçersiz blok türü!");
+      if ((state.inventory[placeType] || 0) <= 0) return showMsg(`${placeType} yok!`);
+
       const pos = target.object.position.clone().add(target.face.normal);
-      const bx = Math.round(pos.x); const by = Math.round(pos.y); const bz = Math.round(pos.z);
+      const bx = Math.round(pos.x), by = Math.round(pos.y), bz = Math.round(pos.z);
 
-      // Oyuncu kendi içine blok koyamasın (sıkışmayı önleme)
-      const px = Math.round(state.player.x); const py = Math.floor(state.player.y); const pz = Math.round(state.player.z);
-      if (bx === px && bz === pz && (by === py || by === py + 1)) {
-        return showMsg("Kendi üstüne koyamazsın!");
-      }
+      const px = Math.round(state.player.x), py = Math.floor(state.player.y), pz = Math.round(state.player.z);
+      if (bx === px && bz === pz && (by === py || by === py + 1)) return showMsg("Kendi üstüne koyamazsın!");
 
-      const chunkKey = chunkKeyFn(worldToChunk(bx), worldToChunk(bz));
-      let chunk = state.world.chunks.get(chunkKey);
+      const cKey = chunkKeyFn(worldToChunk(bx), worldToChunk(bz));
+      const chunk = state.world.chunks.get(cKey);
       if (!chunk) return;
 
-      state.inventory.plank -= 1;
-      const mesh = addMesh(plankMat, bx, by, bz, "plank", chunkKey);
+      state.inventory[placeType] -= 1;
+      const mesh = addMesh(placeMap[placeType], bx, by, bz, placeType, cKey);
       chunk.meshes.push(mesh);
       updateHud();
-      showMsg("Tahta koydun.");
+      showMsg(`${placeType === "plank" ? "Tahta" : placeType === "sand" ? "Kum" : placeType === "dirt" ? "Toprak" : placeType === "stone" ? "Taş" : "Cam"} koydun.`);
     }
-    function chunkKeyFn(cx, cz) { return `${cx},${cz}`; }
 
     function removeObject(obj) {
       const data = obj.userData;
@@ -528,32 +623,66 @@
       scene.remove(obj);
 
       if (data.type === "wood") state.inventory.wood += 1;
-      else if (data.type === "plank") state.inventory.plank += 1; // Koyduğunu geri alma
+      else if (data.type === "plank") state.inventory.plank += 1;
       else if (data.type === "stone") state.inventory.stone += 1;
+      else if (data.type === "sand") state.inventory.sand += 1;
+      else if (data.type === "dirt") state.inventory.dirt += 1;
+      else if (data.type === "glass") state.inventory.glass += 1;
       updateHud();
     }
 
-    // Arayüz Bağlantıları
-    document.getElementById("toWorldBtn").onclick = () => { document.getElementById("startScreen").style.display="none"; document.getElementById("worldScreen").style.display="flex"; };
+    function startMultiplayerMock() {
+      addChatMsg("Sistem", `${chars[state.selectedChar].name} sunucuya bağlandı.`, true);
+      setTimeout(() => addChatMsg("Mert_Pro", "Ooo hoşgeldin kanka!"), 4000);
+      setTimeout(() => addChatMsg("Mert_Pro", "Ev yapıyorum yanıma gel, sandık var."), 9000);
+      setInterval(() => {
+        const msgs = ["Gece oluyor zombilere dikkat!", "Kaan oyundan ayrıldı.", "Elması olan var mı takaslık?", "Lag var mı sizde?"];
+        if (Math.random() > 0.6) addChatMsg("Server_Oyuncu", msgs[Math.floor(Math.random()*msgs.length)]);
+      }, 25000);
+    }
+
+    document.getElementById("toWorldBtn").onclick = () => {
+      document.getElementById("startScreen").style.display = "none";
+      document.getElementById("worldScreen").style.display = "flex";
+    };
+
     document.getElementById("createWorldBtn").onclick = () => {
-      state.worldName = document.getElementById("worldNameInput").value.trim() || "Yeni Dünya";
+      state.worldName = document.getElementById("worldNameInput").value.trim() || "Sunucu";
+      state.worldSeed = 0;
       for (let i = 0; i < state.worldName.length; i++) state.worldSeed += state.worldName.charCodeAt(i);
       state.selectedChar = Number(document.querySelector(".char.selected").dataset.char);
       state.player.speed = chars[state.selectedChar].speed * (document.getElementById("fastMode").checked ? 1.25 : 1);
       state.cameraMode = document.getElementById("thirdPerson").checked ? "third" : "first";
       playerBody.material.color.setHex(chars[state.selectedChar].color);
       document.getElementById("worldScreen").style.display = "none";
-      updateHud(); renderCraftList(); updateChunkStreaming();
+      updateHud(); renderCraftList(); updateChunkStreaming(); startMultiplayerMock();
     };
-    
-    document.getElementById("closeCraft").onclick = () => document.getElementById("craftModal").style.display="none";
-    document.getElementById("closeInv").onclick = () => document.getElementById("invModal").style.display="none";
-    document.getElementById("jumpBtn").onclick = () => { if (state.player.onGround) { state.player.vy = 7.1; state.player.onGround = false; } };
-    document.getElementById("cameraBtn").onclick = () => { state.cameraMode = state.cameraMode === "third"?"first":"third"; };
-    document.getElementById("craftBtn").onclick = () => document.getElementById("craftModal").style.display="flex";
-    document.getElementById("openInvBtn").onclick = () => { document.getElementById("invModal").style.display="flex"; updateInvModal(); };
+
+    document.getElementById("closeCraft").onclick = () => document.getElementById("craftModal").style.display = "none";
+    document.getElementById("closeInv").onclick = () => document.getElementById("invModal").style.display = "none";
+
+    document.getElementById("jumpBtn").onclick = () => { if (state.player.onGround) { state.player.vy = 7.5; state.player.onGround = false; } };
+    document.getElementById("fwdJumpBtn").onclick = () => {
+      if (state.player.onGround) {
+        state.player.vy = 6.0;
+        state.player.onGround = false;
+        state.player.vx += Math.sin(state.yaw) * 12;
+        state.player.vz += Math.cos(state.yaw) * 12;
+        showMsg("Hızlı Atılma!");
+      }
+    };
+    document.getElementById("cameraBtn").onclick = () => { state.cameraMode = state.cameraMode === "third" ? "first" : "third"; };
+    document.getElementById("craftBtn").onclick = () => document.getElementById("craftModal").style.display = "flex";
+    document.getElementById("openInvBtn").onclick = () => { document.getElementById("invModal").style.display = "flex"; updateInvModal(); };
     document.getElementById("placeBtn").onclick = placeBlock;
-    
+
+    document.querySelectorAll("[data-place]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.placeMode = btn.dataset.place;
+        showMsg(`Yerleştirme: ${btn.textContent}`);
+      });
+    });
+
     const bBtn = document.getElementById("breakBtn");
     bBtn.addEventListener("pointerdown", () => { state.breakState.pointerHeld = true; startBreaking(); });
     bBtn.addEventListener("pointerup", () => { state.breakState.pointerHeld = false; stopBreaking(); });
@@ -566,7 +695,7 @@
 
     let joy = { active: false, id: null, cx: 0, cy: 0 };
     const joystick = document.getElementById("joystick"), stick = document.getElementById("stick");
-    joystick.addEventListener("pointerdown", (e) => { joy.active=true; joy.id=e.pointerId; joy.cx=e.clientX; joy.cy=e.clientY; joystick.setPointerCapture(e.pointerId); });
+    joystick.addEventListener("pointerdown", (e) => { joy.active = true; joy.id = e.pointerId; joy.cx = e.clientX; joy.cy = e.clientY; joystick.setPointerCapture(e.pointerId); });
     joystick.addEventListener("pointermove", (e) => {
       if (!joy.active || e.pointerId !== joy.id) return;
       const dx = e.clientX - joy.cx, dy = e.clientY - joy.cy, max = 44;
@@ -579,7 +708,7 @@
 
     let drag = null;
     window.addEventListener("pointerdown", (e) => {
-      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay"))) return;
+      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay") || e.target.closest("#chatBox") || e.target.closest("#placePicker"))) return;
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
     });
     window.addEventListener("pointermove", (e) => {
@@ -593,41 +722,52 @@
     window.addEventListener("keydown", (e) => {
       keys[e.key.toLowerCase()] = true;
       if (e.key === " ") document.getElementById("jumpBtn").click();
-      if (e.key.toLowerCase() === "r") placeBlock(); // PC'de R ile koyma
+      if (e.key.toLowerCase() === "r") placeBlock();
       if (e.key.toLowerCase() === "c") document.getElementById("cameraBtn").click();
       if (e.key.toLowerCase() === "i") document.getElementById("openInvBtn").click();
+      if (e.key.toLowerCase() === "f") document.getElementById("fwdJumpBtn").click();
     });
     window.addEventListener("keyup", (e) => keys[e.key.toLowerCase()] = false);
-    
-    // PC'de Sol Tık: Kır, Sağ Tık: Koy
+
     window.addEventListener("mousedown", (e) => {
-      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay"))) return;
+      if (e.target.closest && (e.target.closest("#joystick") || e.target.closest("button") || e.target.closest(".modal-overlay") || e.target.closest(".screen-overlay") || e.target.closest("#chatBox") || e.target.closest("#placePicker"))) return;
       if (e.button === 0) { state.breakState.pointerHeld = true; startBreaking(); }
       if (e.button === 2) placeBlock();
     });
     window.addEventListener("mouseup", (e) => { if (e.button === 0) { state.breakState.pointerHeld = false; stopBreaking(); } });
-    window.addEventListener("contextmenu", (e) => e.preventDefault()); // Sağ tık menüsünü engelle
+    window.addEventListener("contextmenu", (e) => e.preventDefault());
 
     function applyKeyboard() {
       let mx = 0, my = 0;
       if (keys["w"] || keys["arrowup"]) my += 1; if (keys["s"] || keys["arrowdown"]) my -= 1;
       if (keys["a"] || keys["arrowleft"]) mx -= 1; if (keys["d"] || keys["arrowright"]) mx += 1;
-      if (mx || my) { const l = Math.hypot(mx, my); state.keyX = mx / l; state.keyY = my / l; } else { state.keyX = 0; state.keyY = 0; }
+      if (mx || my) {
+        const l = Math.hypot(mx, my);
+        state.keyX = mx / l; state.keyY = my / l;
+      } else {
+        state.keyX = 0; state.keyY = 0;
+      }
     }
+
     function syncMovementInput() {
-      state.moveX = Math.max(-1, Math.min(1, state.joyX + state.keyX)); state.moveY = Math.max(-1, Math.min(1, state.joyY + state.keyY));
-      if (Math.abs(state.moveX) < 0.03) state.moveX = 0; if (Math.abs(state.moveY) < 0.03) state.moveY = 0;
+      state.moveX = Math.max(-1, Math.min(1, state.joyX + state.keyX));
+      state.moveY = Math.max(-1, Math.min(1, state.joyY + state.keyY));
+      if (Math.abs(state.moveX) < 0.03) state.moveX = 0;
+      if (Math.abs(state.moveY) < 0.03) state.moveY = 0;
     }
 
     function updateMovement(dt) {
       const yaw = state.yaw;
-      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw)), right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
+      const forward = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
+      const right = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw));
       const input = new THREE.Vector3().addScaledVector(forward, state.moveY).addScaledVector(right, state.moveX);
       if (input.lengthSq() > 0) input.normalize().multiplyScalar(state.player.speed);
 
       const accel = state.player.onGround ? 38 : 10;
       state.player.vx += (input.x - state.player.vx) * Math.min(1, accel * dt);
       state.player.vz += (input.z - state.player.vz) * Math.min(1, accel * dt);
+
+      state.player.lastVy = state.player.vy;
 
       if (!state.player.onGround) state.player.vy -= 18 * dt;
       else {
@@ -638,28 +778,65 @@
 
       state.player.x += state.player.vx * dt; state.player.z += state.player.vz * dt; state.player.y += state.player.vy * dt;
 
-      // YENİ FİZİK KONTROLÜ
       const ground = getGroundHeight(state.player.x, state.player.z);
-      
-      // Eğer oyuncu yere deydiyse (veya altındaki blok kırılıp aniden ground düştüyse)
+
       if (state.player.y <= ground) {
-        state.player.y = ground; 
-        state.player.vy = 0; 
+        if (!state.player.onGround && state.player.lastVy < -12) {
+          const dmg = Math.floor(Math.abs(state.player.lastVy) * 2.5);
+          state.health -= dmg;
+          state.shakeAmt = 0.5;
+          showMsg("Kemiklerin kırıldı! Can: -" + dmg);
+          updateHud();
+        }
+        state.player.y = ground;
+        state.player.vy = 0;
         state.player.onGround = true;
       } else {
-        state.player.onGround = false; // Havada süzülüyoruz veya çukura düşüyoruz
+        state.player.onGround = false;
       }
+
+      if (state.player.y < -30) {
+        state.health = 0;
+        updateHud();
+      }
+    }
+
+    function updateEnvironment(dt) {
+      state.timeOfDay += dt * 0.05;
+      const cycle = (Math.sin(state.timeOfDay) + 1) / 2;
+      const dayColor = new THREE.Color(0xaad8ff);
+      const nightColor = new THREE.Color(0x051122);
+      const curColor = dayColor.clone().lerp(nightColor, 1 - cycle);
+      scene.background = curColor;
+      scene.fog.color = curColor;
+      hemi.intensity = 0.3 + (cycle * 0.95);
+      sun.intensity = 0.1 + (cycle * 1.1);
+      sun.position.x = Math.sin(state.timeOfDay) * 100;
+      sun.position.y = Math.max(0, Math.cos(state.timeOfDay) * 100);
     }
 
     function updateCamera() {
       const px = state.player.x, py = state.player.y + eyeHeight, pz = state.player.z;
-      const lookX = px + Math.sin(state.yaw) * Math.cos(state.pitch), lookY = py + Math.sin(state.pitch) * 2.1, lookZ = pz + Math.cos(state.yaw) * Math.cos(state.pitch);
-      if (state.cameraMode === "first") { camera.position.set(px, py, pz); camera.lookAt(lookX, lookY, lookZ); playerGroup.visible = false; }
-      else {
+      let shakeX = (Math.random() - 0.5) * state.shakeAmt;
+      let shakeY = (Math.random() - 0.5) * state.shakeAmt;
+      state.shakeAmt *= 0.9;
+      if (state.shakeAmt < 0.01) state.shakeAmt = 0;
+
+      const lookX = px + Math.sin(state.yaw) * Math.cos(state.pitch) + shakeX;
+      const lookY = py + Math.sin(state.pitch) * 2.1 + shakeY;
+      const lookZ = pz + Math.cos(state.yaw) * Math.cos(state.pitch) + shakeX;
+
+      if (state.cameraMode === "first") {
+        camera.position.set(px + shakeX, py + shakeY, pz + shakeX);
+        camera.lookAt(lookX, lookY, lookZ);
+        playerGroup.visible = false;
+      } else {
         playerGroup.visible = true;
         const dist = 4.8;
         const desired = new THREE.Vector3(px - Math.sin(state.yaw) * dist, py + 1.7, pz - Math.cos(state.yaw) * dist);
-        camera.position.lerp(desired, 0.14); camera.lookAt(px, py + 0.95, pz);
+        camera.position.lerp(desired, 0.14);
+        camera.position.x += shakeX; camera.position.y += shakeY;
+        camera.lookAt(px, py + 0.95, pz);
       }
     }
 
@@ -669,8 +846,7 @@
       if (document.getElementById("startScreen").style.display !== "none" || document.getElementById("worldScreen").style.display !== "none") return;
 
       applyKeyboard(); syncMovementInput();
-      
-      // Hedefleme Kutusu Güncellemesi
+
       const tRay = getTargetRay();
       if (tRay && tRay.object.userData?.type && tRay.object.userData.type !== "water") {
         targetOutline.position.copy(tRay.object.position);
@@ -681,11 +857,13 @@
 
       if (state.breakState.pointerHeld && !state.breakState.target) startBreaking();
 
-      updateMovement(dt); updateChunkStreaming();
+      updateMovement(dt);
+      updateChunkStreaming();
+      updateEnvironment(dt);
+
       playerGroup.position.set(state.player.x, 0, state.player.z); playerGroup.rotation.y = state.yaw;
       updateCamera();
 
-      // Kırma Animasyonu
       if (state.breakState.active && state.breakState.target) {
         state.breakState.progress += dt;
         const pct = Math.min(1, state.breakState.progress / state.breakState.time);
@@ -696,7 +874,15 @@
 
       renderer.render(scene, camera);
     }
-    window.addEventListener("resize", () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    document.getElementById("craftBtn").addEventListener("click", () => renderCraftList());
+
     animate();
   </script>
 </body>
